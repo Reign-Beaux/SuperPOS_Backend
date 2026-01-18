@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageReference Include="Mapster" Version="7.4.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
   </ItemGroup>
 
@@ -21,11 +22,7 @@
     <Folder Include="DesignPatterns/" />
     <Folder Include="Extensions/" />
     <Folder Include="Options/" />
-    <Folder Include="UseCases/" />
-    <Folder Include="UseCases/Articles/" />
-    <Folder Include="UseCases/Articles/CQRS/" />
     <Folder Include="UseCases/Articles/CQRS/Commands/" />
-    <Folder Include="UseCases/Articles/CQRS/Queries/" />
     <Folder Include="UseCases/Articles/DTOs/" />
     <Folder Include="UseCases/Articles/Specifications/" />
   </ItemGroup>
