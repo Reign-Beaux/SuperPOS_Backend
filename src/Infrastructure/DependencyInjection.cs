@@ -1,8 +1,7 @@
 using Application.Interfaces.Persistence.Context;
 using Application.Interfaces.Persistence.UnitOfWorks;
+using Infrastructure.Persistence;
 using Infrastructure.Persistence.Context;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure;
 
@@ -30,7 +29,7 @@ public static class DependencyInjection
 
         services.AddScoped<ISuperPOSDbContext>(sp => sp.GetRequiredService<SuperPOSDbContext>());
 
-        services.AddScoped<IUnitOfWork, IUnitOfWork>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
