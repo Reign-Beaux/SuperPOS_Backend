@@ -1,8 +1,7 @@
+using Application.DesignPatterns.Specifications;
 using Application.Interfaces.Persistence;
 using Application.Interfaces.Persistence.Context;
-using Application.Specifications;
 using Infrastructure.Persistence.Specification;
-using System.Linq.Expressions;
 
 namespace Infrastructure.Persistence;
 
