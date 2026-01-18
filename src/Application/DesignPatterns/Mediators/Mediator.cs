@@ -1,7 +1,6 @@
-﻿using DesignPatterns.Mediators.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Application.DesignPatterns.Mediators.Interfaces;
 
-namespace DesignPatterns.Mediators;
+namespace Application.DesignPatterns.Mediators;
 
 public sealed class Mediator : IMediator
 {

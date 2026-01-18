@@ -1,4 +1,4 @@
-﻿namespace DesignPatterns.Mediators.Interfaces;
+﻿namespace Application.DesignPatterns.Mediators.Interfaces;
 
 public interface IPipelineBehavior<TRequest, TResponse>
 {
