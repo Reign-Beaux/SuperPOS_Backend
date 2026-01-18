@@ -1,4 +1,4 @@
-using Application.Specifications;
+using Application.DesignPatterns.Specifications;
 
 namespace Application.Interfaces.Persistence;
 
