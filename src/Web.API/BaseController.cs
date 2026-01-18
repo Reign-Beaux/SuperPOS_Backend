@@ -15,9 +15,11 @@ public abstract class BaseController : ControllerBase
             StatusResult.NoContent
                 => NoContent(),
 
-            StatusResult.Created
-                when actionName is not null && result.Value is not null
-                => CreatedAtAction(actionName, new { id = result.Value }, result.Value),
+            StatusResult.Created when actionName is not null && result.Value is not null =>
+                CreatedAtAction(
+                    actionName,
+                    new { id = result.Value.GetType().GetProperty("Id")?.GetValue(result.Value) },
+                    result.Value),
 
             StatusResult.Exists
                 => Conflict(result.Error),
