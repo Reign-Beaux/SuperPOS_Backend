@@ -1,5 +1,4 @@
-namespace DesignPatterns.OperationResults;
-
+namespace Application.DesignPatterns.OperationResults;
 
 public interface IOperationResult
 {
