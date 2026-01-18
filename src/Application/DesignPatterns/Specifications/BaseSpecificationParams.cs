@@ -1,4 +1,4 @@
-namespace Application.Specifications;
+namespace Application.DesignPatterns.Specifications;
 
 public abstract class BaseSpecificationParams
 {

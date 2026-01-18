@@ -1,4 +1,4 @@
-namespace Application.Specifications.Pagination;
+namespace Application.DesignPatterns.Specifications.Pagination;
 
 public abstract class BasePaginationQuery
 {

@@ -1,6 +1,4 @@
-using System.Linq.Expressions;
-
-namespace Application.Specifications;
+namespace Application.DesignPatterns.Specifications;
 
 public abstract class BaseSpecification<T> : ISpecification<T>
 {
