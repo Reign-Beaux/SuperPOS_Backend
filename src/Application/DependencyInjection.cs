@@ -1,5 +1,3 @@
-using Application.Behaviors;
-using Application.Features.Articles.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 

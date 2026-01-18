@@ -1,5 +1,4 @@
 using Application;
-using DesignPatterns.Mediators;
 using Infrastructure;
 using Web.API;
 using Web.API.Extensions;
@@ -14,16 +13,15 @@ builder
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 var cors = "Cors";
-var origins = builder.Configuration.GetSection("ProjectName:CorsSettings:Origins").Get<string[]>();
+var origins = builder.Configuration.GetSection("CorsSettings:Origins").Get<string[]>();
 
 if (origins is null || origins.Length == 0)
     throw new InvalidOperationException("No se configuraron los orígenes permitidos para CORS (CorsSettings:AllowedOrigins).");
 
 // Add services to the container.
 builder.Services
-    .AddWebAPI()
+    .AddWebAPI(builder.Configuration)
     .AddApplication()
-    .AddMediator(Assembly.GetExecutingAssembly())
     .AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>
@@ -46,7 +44,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    // app.ApplyMigrations();
+    app.ApplyMigrations();
 }
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
