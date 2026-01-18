@@ -1,10 +1,3 @@
-using Application.Interfaces.Persistence.Context;
-using Application.Interfaces.Persistence.UnitOfWorks;
-using Application.Interfaces.Services;
-using Infrastructure.Persistence;
-using Infrastructure.Persistence.Context;
-using Infrastructure.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
