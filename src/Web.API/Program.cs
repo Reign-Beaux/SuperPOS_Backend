@@ -1,5 +1,4 @@
 using Application;
-using Application.DesignPatterns.Mediators;
 using Infrastructure;
 using Web.API;
 using Web.API.Extensions;
@@ -23,8 +22,7 @@ if (origins is null || origins.Length == 0)
 builder.Services
     .AddWebAPI(builder.Configuration)
     .AddApplication()
-    .AddInfrastructure(builder.Configuration)
-    .AddMediator(typeof(Program).Assembly);
+    .AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {
