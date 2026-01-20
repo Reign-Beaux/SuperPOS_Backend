@@ -5,6 +5,8 @@ namespace Domain.Entities.Sales;
 
 public class Sale : BaseEntity
 {
+    public Sale() { }
+
     public Guid CustomerId { get; set; }
     public Guid UserId { get; set; }
     public decimal TotalAmount { get; set; }

@@ -4,6 +4,8 @@ namespace Domain.Entities.Articles;
 
 public class Article : BaseCatalog
 {
+    public Article() { }
+
     public string? Barcode { get; set; }
     public decimal UnitPrice { get; set; }
 

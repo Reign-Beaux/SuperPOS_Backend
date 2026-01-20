@@ -4,6 +4,8 @@ namespace Domain.Entities.Sales;
 
 public class SaleDetail : BaseEntity
 {
+    public SaleDetail() { }
+
     public Guid SaleId { get; set; }
     public Guid ArticleId { get; set; }
     public int Quantity { get; set; }

@@ -4,6 +4,8 @@ namespace Domain.Entities.Inventories;
 
 public class Inventory : BaseEntity
 {
+    public Inventory() { }
+
     public Guid ArticleId { get; set; }
     public int Quantity { get; set; }
 
