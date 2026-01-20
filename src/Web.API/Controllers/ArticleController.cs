@@ -1,6 +1,9 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.UseCases.Articles.CQRS.Commands.Create;
+using Application.UseCases.Articles.CQRS.Commands.Update;
+using Application.UseCases.Articles.CQRS.Commands.Delete;
 using Application.UseCases.Articles.CQRS.Queries.GetById;
+using Application.UseCases.Articles.CQRS.Queries.GetAll;
 
 namespace Web.API.Controllers;
 
@@ -19,6 +22,30 @@ public class ArticleController(IMediator mediator) : BaseController
     {
         ArticleGetByIdQuery request = new(id);
         var result = await mediator.Send(request);
+        return HandleResult(result);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await mediator.Send(new ArticleGetAllQuery());
+        return HandleResult(result);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] ArticleUpdateCommand command)
+    {
+        if (id != command.Id)
+            return BadRequest("Id mismatch");
+
+        var result = await mediator.Send(command);
+        return HandleResult(result);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var result = await mediator.Send(new ArticleDeleteCommand(id));
         return HandleResult(result);
     }
 }

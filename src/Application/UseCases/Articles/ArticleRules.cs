@@ -40,4 +40,9 @@ internal sealed class ArticleRules(IUnitOfWork unitOfWork)
 
         return Result.Success();
     }
+
+    public async Task<Article?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return await _unitOfWork.Repository<Article>().GetByIdAsync(id, cancellationToken);
+    }
 }
