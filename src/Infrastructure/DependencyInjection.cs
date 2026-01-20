@@ -1,4 +1,3 @@
-using Application.Interfaces.Persistence.Context;
 using Application.Interfaces.Persistence.UnitOfWorks;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Context;
@@ -26,8 +25,6 @@ public static class DependencyInjection
     private static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<SuperPOSDbContext>(options => options.UseSqlServer(configuration.GetConnectionString("SuperPOS")));
-
-        services.AddScoped<ISuperPOSDbContext>(sp => sp.GetRequiredService<SuperPOSDbContext>());
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

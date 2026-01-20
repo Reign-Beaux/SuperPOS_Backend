@@ -1,13 +1,12 @@
 using Application.Interfaces.Persistence;
-using Application.Interfaces.Persistence.Context;
 using Application.Interfaces.Persistence.UnitOfWorks;
 using Infrastructure.Persistence.Context;
 
 namespace Infrastructure.Persistence;
 
-public class UnitOfWork(ISuperPOSDbContext context) : IUnitOfWork
+public class UnitOfWork(SuperPOSDbContext context) : IUnitOfWork
 {
-    private readonly ISuperPOSDbContext _context = context;
+    private readonly SuperPOSDbContext _context = context;
     private IDbContextTransaction? _transaction;
     private readonly Dictionary<Type, object> _repositories = [];
     private bool _disposed = false;
@@ -32,10 +31,7 @@ public class UnitOfWork(ISuperPOSDbContext context) : IUnitOfWork
 
     public async Task BeginTransactionAsync()
     {
-        if (_context is SuperPOSDbContext dbContext)
-        {
-            _transaction = await dbContext.Database.BeginTransactionAsync();
-        }
+        _transaction = await _context.Database.BeginTransactionAsync();
     }
 
     public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
@@ -77,10 +73,7 @@ public class UnitOfWork(ISuperPOSDbContext context) : IUnitOfWork
                     _transaction = null;
                 }
 
-                if (_context is SuperPOSDbContext dbContext)
-                {
-                    dbContext.Dispose();
-                }
+                _context.Dispose();
             }
 
             _disposed = true;

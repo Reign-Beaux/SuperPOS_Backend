@@ -1,12 +1,23 @@
-using Application.Interfaces.Persistence.Context;
 using Domain.Entities;
 using Domain.Entities.Articles;
+using Domain.Entities.Customers;
+using Domain.Entities.Inventories;
+using Domain.Entities.Roles;
+using Domain.Entities.Sales;
+using Domain.Entities.Users;
 
 namespace Infrastructure.Persistence.Context;
 
-public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : DbContext(options), ISuperPOSDbContext
+public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : DbContext(options)
 {
     public DbSet<Article> Articles { get; set; } = null!;
+    public DbSet<Inventory> Inventory { get; set; } = null!;
+    public DbSet<Customer> Customers { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Role> Roles { get; set; } = null!;
+    public DbSet<UserRole> UserRoles { get; set; } = null!;
+    public DbSet<Sale> Sales { get; set; } = null!;
+    public DbSet<SaleDetail> SaleDetails { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

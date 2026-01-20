@@ -1,13 +1,13 @@
 using Application.DesignPatterns.Specifications;
 using Application.Interfaces.Persistence;
-using Application.Interfaces.Persistence.Context;
+using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Specification;
 
 namespace Infrastructure.Persistence;
 
-public sealed class Repository<T>(ISuperPOSDbContext context) : IRepository<T> where T : class
+public sealed class Repository<T>(SuperPOSDbContext context) : IRepository<T> where T : class
 {
-    private readonly ISuperPOSDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
+    private readonly SuperPOSDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
     public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default)
     {
