@@ -1,3 +1,5 @@
+using Domain.Entities.Articles;
+
 namespace Domain.Entities.Sales;
 
 public class SaleDetail : BaseEntity
@@ -10,5 +12,5 @@ public class SaleDetail : BaseEntity
 
     // Navigation Properties
     public Sale Sale { get; set; } = null!;
-    public Articles.Article Article { get; set; } = null!;
+    public Article Article { get; set; } = null!;
 }

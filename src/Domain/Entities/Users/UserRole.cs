@@ -1,3 +1,5 @@
+using Domain.Entities.Roles;
+
 namespace Domain.Entities.Users;
 
 public class UserRole
@@ -7,5 +9,5 @@ public class UserRole
 
     // Navigation Properties
     public User User { get; set; } = null!;
-    public Roles.Role Role { get; set; } = null!;
+    public Role Role { get; set; } = null!;
 }

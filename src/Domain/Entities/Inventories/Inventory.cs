@@ -1,3 +1,5 @@
+using Domain.Entities.Articles;
+
 namespace Domain.Entities.Inventories;
 
 public class Inventory : BaseEntity
@@ -6,5 +8,5 @@ public class Inventory : BaseEntity
     public int Quantity { get; set; }
 
     // Navigation Properties
-    public Articles.Article Article { get; set; } = null!;
+    public Article Article { get; set; } = null!;
 }

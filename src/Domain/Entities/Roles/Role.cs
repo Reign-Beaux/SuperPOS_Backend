@@ -1,7 +1,9 @@
+using Domain.Entities.Users;
+
 namespace Domain.Entities.Roles;
 
 public class Role : BaseCatalog
 {
     // Navigation Properties
-    public ICollection<Users.UserRole> UserRoles { get; set; } = [];
+    public ICollection<UserRole> UserRoles { get; set; } = [];
 }

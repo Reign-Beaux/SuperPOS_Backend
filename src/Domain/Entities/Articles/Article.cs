@@ -1,3 +1,5 @@
+using Domain.Entities.Sales;
+
 namespace Domain.Entities.Articles;
 
 public class Article : BaseCatalog
@@ -7,5 +9,5 @@ public class Article : BaseCatalog
 
     // Navigation Properties
     public ICollection<Inventories.Inventory> Inventories { get; set; } = [];
-    public ICollection<Sales.SaleDetail> SaleDetails { get; set; } = [];
+    public ICollection<SaleDetail> SaleDetails { get; set; } = [];
 }

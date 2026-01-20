@@ -1,3 +1,5 @@
+using Domain.Entities.Sales;
+
 namespace Domain.Entities.Users;
 
 public class User : BaseEntity
@@ -10,6 +12,6 @@ public class User : BaseEntity
     public string? Phone { get; set; }
 
     // Navigation Properties
-    public ICollection<Sales.Sale> Sales { get; set; } = [];
+    public ICollection<Sale> Sales { get; set; } = [];
     public ICollection<UserRole> UserRoles { get; set; } = [];
 }

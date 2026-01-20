@@ -1,3 +1,5 @@
+using Domain.Entities.Sales;
+
 namespace Domain.Entities.Customers;
 
 public class Customer : BaseEntity
@@ -10,5 +12,5 @@ public class Customer : BaseEntity
     public DateTime? BirthDate { get; set; }
 
     // Navigation Properties
-    public ICollection<Sales.Sale> Sales { get; set; } = [];
+    public ICollection<Sale> Sales { get; set; } = [];
 }
