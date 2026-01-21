@@ -1,6 +1,8 @@
 using Application.Interfaces.Persistence.UnitOfWorks;
+using Application.Interfaces.Services;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Context;
+using Infrastructure.Services;
 
 namespace Infrastructure;
 
@@ -33,6 +35,8 @@ public static class DependencyInjection
 
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
+        services.AddScoped<IEncryptionService, EncryptionService>();
+        
         return services;
     }
 }
