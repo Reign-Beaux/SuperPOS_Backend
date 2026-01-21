@@ -10,6 +10,6 @@ public class UserMappings : IRegister
     {
         config.NewConfig<User, UserDTO>();
         config.NewConfig<UserUpdateCommand, User>()
-            .Ignore(dest => dest.PasswordHashed); // Don't map password directly
+            .Ignore(dest => dest.PasswordHashed);
     }
 }
