@@ -25,14 +25,8 @@ public sealed class CreateRoleHandler
         CreateRoleCommand request,
         CancellationToken cancellationToken)
     {
-        // Create Role entity from command
-        var role = new Role
-        {
-            Name = request.Name,
-            Description = request.Description ?? string.Empty
-        };
+        var role = _mapper.Map<Role>(request);
 
-        // Validate uniqueness
         var validationResult = await _roleRules.EnsureUniquenessAsync(
             role,
             isUpdate: false,
@@ -41,10 +35,8 @@ public sealed class CreateRoleHandler
         if (!validationResult.IsSuccess)
             return validationResult;
 
-        // Add to repository
         _unitOfWork.Repository<Role>().Add(role);
 
-        // Save changes
         var affectedRows = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (affectedRows == 0)
@@ -52,7 +44,6 @@ public sealed class CreateRoleHandler
                 ErrorResult.BadRequest,
                 detail: RoleMessages.Create.Failed);
 
-        // Map to DTO and return
         var roleDto = _mapper.Map<RoleDTO>(role);
 
         return new OperationResult<RoleDTO>(StatusResult.Created, roleDto);

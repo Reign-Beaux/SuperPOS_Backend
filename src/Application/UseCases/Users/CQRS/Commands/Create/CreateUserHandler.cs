@@ -26,18 +26,9 @@ public sealed class CreateUserHandler
         CreateUserCommand request,
         CancellationToken cancellationToken)
     {
-        // Create User entity from command
-        var user = new User
-        {
-            Name = request.Name,
-            FirstLastname = request.FirstLastname,
-            SecondLastname = request.SecondLastname,
-            Email = request.Email,
-            PasswordHashed = _userRules.HashPassword(request.Password),
-            Phone = request.Phone
-        };
+        var user = _mapper.Map<User>(request);
+        user.PasswordHashed = _userRules.HashPassword(request.Password);
 
-        // Validate uniqueness
         var validationResult = await _userRules.EnsureUniquenessAsync(
             user,
             isUpdate: false,
@@ -46,10 +37,8 @@ public sealed class CreateUserHandler
         if (!validationResult.IsSuccess)
             return validationResult;
 
-        // Add to repository
         _unitOfWork.Repository<User>().Add(user);
 
-        // Save changes
         var affectedRows = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (affectedRows == 0)
@@ -57,7 +46,6 @@ public sealed class CreateUserHandler
                 ErrorResult.BadRequest,
                 detail: UserMessages.Create.Failed);
 
-        // Map to DTO and return
         var userDto = _mapper.Map<UserDTO>(user);
 
         return new OperationResult<UserDTO>(StatusResult.Created, userDto);

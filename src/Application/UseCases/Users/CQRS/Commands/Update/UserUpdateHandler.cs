@@ -33,7 +33,6 @@ public sealed class UserUpdateHandler
 
         request.Adapt(user);
 
-        // Hash password if provided
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
             user.PasswordHashed = _userRules.HashPassword(request.Password);

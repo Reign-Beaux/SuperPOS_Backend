@@ -25,18 +25,8 @@ public sealed class CreateCustomerHandler
         CreateCustomerCommand request,
         CancellationToken cancellationToken)
     {
-        // Create Customer entity from command
-        var customer = new Customer
-        {
-            Name = request.Name,
-            FirstLastname = request.FirstLastname,
-            SecondLastname = request.SecondLastname,
-            Phone = request.Phone,
-            Email = request.Email,
-            BirthDate = request.BirthDate
-        };
+        var customer = _mapper.Map<Customer>(request);
 
-        // Validate uniqueness
         var validationResult = await _customerRules.EnsureUniquenessAsync(
             customer,
             isUpdate: false,
@@ -45,10 +35,8 @@ public sealed class CreateCustomerHandler
         if (!validationResult.IsSuccess)
             return validationResult;
 
-        // Add to repository
         _unitOfWork.Repository<Customer>().Add(customer);
 
-        // Save changes
         var affectedRows = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (affectedRows == 0)
@@ -56,7 +44,6 @@ public sealed class CreateCustomerHandler
                 ErrorResult.BadRequest,
                 detail: CustomerMessages.Create.Failed);
 
-        // Map to DTO and return
         var customerDto = _mapper.Map<CustomerDTO>(customer);
 
         return new OperationResult<CustomerDTO>(StatusResult.Created, customerDto);

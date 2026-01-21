@@ -25,15 +25,8 @@ public sealed class CreateArticleHandler
         CreateArticleCommand request,
         CancellationToken cancellationToken)
     {
-        // Create Article entity from command
-        var article = new Article
-        {
-            Name = request.Name,
-            Description = request.Description ?? string.Empty,
-            Barcode = request.Barcode
-        };
+        var article = _mapper.Map<Article>(request);
 
-        // Validate uniqueness
         var validationResult = await _articleRules.EnsureUniquenessAsync(
             article,
             isUpdate: false,
@@ -42,10 +35,8 @@ public sealed class CreateArticleHandler
         if (!validationResult.IsSuccess)
             return validationResult;
 
-        // Add to repository
         _unitOfWork.Repository<Article>().Add(article);
 
-        // Save changes
         var affectedRows = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (affectedRows == 0)
@@ -53,7 +44,6 @@ public sealed class CreateArticleHandler
                 ErrorResult.BadRequest,
                 detail: ArticleMessages.Create.Failed);
 
-        // Map to DTO and return
         var articleDto = _mapper.Map<ArticleDTO>(article);
 
         return new OperationResult<ArticleDTO>(StatusResult.Created, articleDto);
