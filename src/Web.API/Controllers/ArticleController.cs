@@ -35,10 +35,7 @@ public class ArticleController(IMediator mediator) : BaseController
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] ArticleUpdateCommand command)
     {
-        if (id != command.Id)
-            return BadRequest("Id mismatch");
-
-        var result = await mediator.Send(command);
+        var result = await mediator.Send(command with { Id = id });
         return HandleResult(result);
     }
 
