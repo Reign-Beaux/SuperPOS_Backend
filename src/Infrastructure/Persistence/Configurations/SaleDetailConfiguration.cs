@@ -12,7 +12,7 @@ public sealed class SaleDetailConfiguration : IEntityTypeConfiguration<SaleDetai
         builder.Property(sd => sd.SaleId)
           .IsRequired();
 
-        builder.Property(sd => sd.ArticleId)
+        builder.Property(sd => sd.ProductId)
           .IsRequired();
 
         builder.Property(sd => sd.Quantity)
@@ -27,7 +27,7 @@ public sealed class SaleDetailConfiguration : IEntityTypeConfiguration<SaleDetai
           .HasPrecision(18, 2);
 
         builder.HasIndex(sd => sd.SaleId);
-        builder.HasIndex(sd => sd.ArticleId);
+        builder.HasIndex(sd => sd.ProductId);
 
         // Relationships
         builder.HasOne(sd => sd.Sale)
@@ -35,9 +35,9 @@ public sealed class SaleDetailConfiguration : IEntityTypeConfiguration<SaleDetai
           .HasForeignKey(sd => sd.SaleId)
           .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(sd => sd.Article)
+        builder.HasOne(sd => sd.Product)
           .WithMany(a => a.SaleDetails)
-          .HasForeignKey(sd => sd.ArticleId)
+          .HasForeignKey(sd => sd.ProductId)
           .OnDelete(DeleteBehavior.Restrict);
     }
 }

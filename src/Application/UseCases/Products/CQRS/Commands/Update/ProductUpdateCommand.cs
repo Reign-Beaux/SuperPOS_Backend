@@ -1,9 +1,9 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 
-namespace Application.UseCases.Articles.CQRS.Commands.Update;
+namespace Application.UseCases.Products.CQRS.Commands.Update;
 
-public sealed record ArticleUpdateCommand(
+public sealed record ProductUpdateCommand(
     Guid Id,
     string Name,
     string? Description,

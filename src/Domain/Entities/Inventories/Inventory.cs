@@ -1,4 +1,4 @@
-using Domain.Entities.Articles;
+using Domain.Entities.Products;
 
 namespace Domain.Entities.Inventories;
 
@@ -6,9 +6,9 @@ public class Inventory : BaseEntity
 {
     public Inventory() { }
 
-    public Guid ArticleId { get; set; }
+    public Guid ProductId { get; set; }
     public int Quantity { get; set; }
 
     // Navigation Properties
-    public Article Article { get; set; } = null!;
+    public Product Product { get; set; } = null!;
 }

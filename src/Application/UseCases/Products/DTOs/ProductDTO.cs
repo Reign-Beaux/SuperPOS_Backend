@@ -1,6 +1,6 @@
-namespace Application.UseCases.Articles.DTOs;
+namespace Application.UseCases.Products.DTOs;
 
-public class ArticleDTO
+public class ProductDTO
 {
     public Guid Id { get; set; }
     public required string Name { get; set; }

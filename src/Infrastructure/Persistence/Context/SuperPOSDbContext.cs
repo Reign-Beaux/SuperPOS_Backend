@@ -1,5 +1,5 @@
 using Domain.Entities;
-using Domain.Entities.Articles;
+using Domain.Entities.Products;
 using Domain.Entities.Customers;
 using Domain.Entities.Inventories;
 using Domain.Entities.Roles;
@@ -10,7 +10,7 @@ namespace Infrastructure.Persistence.Context;
 
 public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : DbContext(options)
 {
-    public DbSet<Article> Articles { get; set; } = null!;
+    public DbSet<Product> Products { get; set; } = null!;
     public DbSet<Inventory> Inventory { get; set; } = null!;
     public DbSet<Customer> Customers { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;

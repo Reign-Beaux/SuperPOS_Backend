@@ -1,10 +1,10 @@
 using Domain.Entities.Sales;
 
-namespace Domain.Entities.Articles;
+namespace Domain.Entities.Products;
 
-public class Article : BaseCatalog
+public class Product : BaseCatalog
 {
-    public Article() { }
+    public Product() { }
 
     public string? Barcode { get; set; }
     public decimal UnitPrice { get; set; }

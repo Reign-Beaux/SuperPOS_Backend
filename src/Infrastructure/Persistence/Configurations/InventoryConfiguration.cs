@@ -9,19 +9,19 @@ public sealed class InventoryConfiguration : IEntityTypeConfiguration<Inventory>
         builder.ToTable("Inventory");
         builder.HasKey(i => i.Id);
 
-        builder.Property(i => i.ArticleId)
+        builder.Property(i => i.ProductId)
           .IsRequired();
 
         builder.Property(i => i.Quantity)
           .IsRequired();
 
-        builder.HasIndex(i => i.ArticleId)
+        builder.HasIndex(i => i.ProductId)
           .IsUnique();
 
         // Relationship
-        builder.HasOne(i => i.Article)
+        builder.HasOne(i => i.Product)
           .WithMany(a => a.Inventories)
-          .HasForeignKey(i => i.ArticleId)
+          .HasForeignKey(i => i.ProductId)
           .OnDelete(DeleteBehavior.Restrict);
     }
 }

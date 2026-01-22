@@ -1,12 +1,12 @@
-using Domain.Entities.Articles;
+using Domain.Entities.Products;
 
 namespace Infrastructure.Persistence.Configurations;
 
-public sealed class ArticleConfiguration : IEntityTypeConfiguration<Article>
+public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
-    public void Configure(EntityTypeBuilder<Article> builder)
+    public void Configure(EntityTypeBuilder<Product> builder)
     {
-        builder.ToTable("Articles");
+        builder.ToTable("Products");
         builder.HasKey(a => a.Id);
 
         builder.Property(a => a.Name)
@@ -28,13 +28,13 @@ public sealed class ArticleConfiguration : IEntityTypeConfiguration<Article>
 
         // Relationships
         builder.HasMany(a => a.Inventories)
-          .WithOne(i => i.Article)
-          .HasForeignKey(i => i.ArticleId)
+          .WithOne(i => i.Product)
+          .HasForeignKey(i => i.ProductId)
           .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(a => a.SaleDetails)
-          .WithOne(sd => sd.Article)
-          .HasForeignKey(sd => sd.ArticleId)
+          .WithOne(sd => sd.Product)
+          .HasForeignKey(sd => sd.ProductId)
           .OnDelete(DeleteBehavior.Restrict);
     }
 }
