@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Web.API.Middlewares;
+﻿using Web.API.Middlewares;
 
 namespace Web.API;
 
