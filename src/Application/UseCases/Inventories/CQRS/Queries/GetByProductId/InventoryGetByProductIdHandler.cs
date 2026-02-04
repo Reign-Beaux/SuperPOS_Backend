@@ -31,14 +31,7 @@ public class InventoryGetByProductIdHandler : IRequestHandler<InventoryGetByProd
         }
 
         // Cargar el producto manualmente
-        var product = await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken);
-
-        if (product is null)
-        {
-            return Result.Error(ErrorResult.NotFound, detail: ProductMessages.NotFound.General);
-        }
-
-        inventory.Product = product;
+        inventory.Product = (await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken))!;
 
         var dto = _mapper.Map<InventoryDTO>(inventory);
         return Result.Success(dto);

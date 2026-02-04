@@ -97,23 +97,25 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationRes
 
         // Recargar con todas las relaciones para el mapping
         var createdSale = await _unitOfWork.Repository<Sale>().GetByIdAsync(sale.Id, cancellationToken);
-        if (createdSale != null)
+        if (createdSale is null)
         {
-            createdSale.Customer = await _unitOfWork.Repository<Customer>().GetByIdAsync(createdSale.CustomerId, cancellationToken);
-            createdSale.User = await _unitOfWork.Repository<User>().GetByIdAsync(createdSale.UserId, cancellationToken);
+            return Result.Error(ErrorResult.BadRequest, detail: "Error al crear la venta");
+        }
 
-            // Cargar los detalles manualmente
-            var saleDetails = await _unitOfWork.Repository<SaleDetail>().QueryAsync(
-                sd => sd.SaleId == createdSale.Id,
-                cancellationToken: cancellationToken
-            );
+        createdSale.Customer = (await _unitOfWork.Repository<Customer>().GetByIdAsync(createdSale.CustomerId, cancellationToken))!;
+        createdSale.User = (await _unitOfWork.Repository<User>().GetByIdAsync(createdSale.UserId, cancellationToken))!;
 
-            createdSale.SaleDetails = saleDetails.ToList();
+        // Cargar los detalles manualmente
+        var saleDetails = await _unitOfWork.Repository<SaleDetail>().QueryAsync(
+            sd => sd.SaleId == createdSale.Id,
+            cancellationToken: cancellationToken
+        );
 
-            foreach (var detail in createdSale.SaleDetails)
-            {
-                detail.Product = await rules.GetProductAsync(detail.ProductId);
-            }
+        createdSale.SaleDetails = saleDetails.ToList();
+
+        foreach (var detail in createdSale.SaleDetails)
+        {
+            detail.Product = (await rules.GetProductAsync(detail.ProductId))!;
         }
 
         var dto = _mapper.Map<SaleDTO>(createdSale);

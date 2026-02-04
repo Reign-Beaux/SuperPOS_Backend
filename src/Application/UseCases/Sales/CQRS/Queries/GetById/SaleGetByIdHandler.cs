@@ -29,8 +29,8 @@ public class SaleGetByIdHandler : IRequestHandler<SaleGetByIdQuery, OperationRes
         }
 
         // Cargar relaciones manualmente
-        sale.Customer = await _unitOfWork.Repository<Customer>().GetByIdAsync(sale.CustomerId, cancellationToken);
-        sale.User = await _unitOfWork.Repository<User>().GetByIdAsync(sale.UserId, cancellationToken);
+        sale.Customer = (await _unitOfWork.Repository<Customer>().GetByIdAsync(sale.CustomerId, cancellationToken))!;
+        sale.User = (await _unitOfWork.Repository<User>().GetByIdAsync(sale.UserId, cancellationToken))!;
 
         // Cargar los detalles
         var saleDetails = await _unitOfWork.Repository<SaleDetail>().QueryAsync(
@@ -44,7 +44,7 @@ public class SaleGetByIdHandler : IRequestHandler<SaleGetByIdQuery, OperationRes
         var rules = new SaleRules(_unitOfWork);
         foreach (var detail in sale.SaleDetails)
         {
-            detail.Product = await rules.GetProductAsync(detail.ProductId);
+            detail.Product = (await rules.GetProductAsync(detail.ProductId))!;
         }
 
         var dto = _mapper.Map<SaleDTO>(sale);

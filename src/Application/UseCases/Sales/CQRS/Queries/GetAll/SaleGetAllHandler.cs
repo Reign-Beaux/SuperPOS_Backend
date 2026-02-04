@@ -29,8 +29,8 @@ public class SaleGetAllHandler : IRequestHandler<SaleGetAllQuery, OperationResul
         // Cargar relaciones para cada venta
         foreach (var sale in salesList)
         {
-            sale.Customer = await _unitOfWork.Repository<Customer>().GetByIdAsync(sale.CustomerId, cancellationToken);
-            sale.User = await _unitOfWork.Repository<User>().GetByIdAsync(sale.UserId, cancellationToken);
+            sale.Customer = (await _unitOfWork.Repository<Customer>().GetByIdAsync(sale.CustomerId, cancellationToken))!;
+            sale.User = (await _unitOfWork.Repository<User>().GetByIdAsync(sale.UserId, cancellationToken))!;
 
             // Cargar los detalles
             var saleDetails = await _unitOfWork.Repository<SaleDetail>().QueryAsync(
@@ -43,7 +43,7 @@ public class SaleGetAllHandler : IRequestHandler<SaleGetAllQuery, OperationResul
             // Cargar productos de los detalles
             foreach (var detail in sale.SaleDetails)
             {
-                detail.Product = await rules.GetProductAsync(detail.ProductId);
+                detail.Product = (await rules.GetProductAsync(detail.ProductId))!;
             }
         }
 
