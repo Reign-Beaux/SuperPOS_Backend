@@ -5,7 +5,6 @@ using Application.UseCases.Sales.DTOs;
 using Domain.Entities.Customers;
 using Domain.Entities.Sales;
 using Domain.Entities.Users;
-using MapsterMapper;
 
 namespace Application.UseCases.Sales.CQRS.Queries.GetAll;
 

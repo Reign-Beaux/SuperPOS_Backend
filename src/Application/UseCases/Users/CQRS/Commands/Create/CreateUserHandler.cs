@@ -4,7 +4,6 @@ using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.Interfaces.Services;
 using Application.UseCases.Users.DTOs;
 using Domain.Entities.Users;
-using MapsterMapper;
 
 namespace Application.UseCases.Users.CQRS.Commands.Create;
 
