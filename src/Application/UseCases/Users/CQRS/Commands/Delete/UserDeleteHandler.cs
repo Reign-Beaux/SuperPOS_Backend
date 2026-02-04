@@ -1,8 +1,7 @@
+using Domain.Entities.Users;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
-using Application.Interfaces.Services;
-using Domain.Entities.Users;
+using Domain.Repositories;
 
 namespace Application.UseCases.Users.CQRS.Commands.Delete;
 
@@ -10,19 +9,17 @@ public sealed class UserDeleteHandler
     : IRequestHandler<UserDeleteCommand, OperationResult<VoidResult>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly UserRules _userRules;
 
-    public UserDeleteHandler(IUnitOfWork unitOfWork, IEncryptionService encryptionService)
+    public UserDeleteHandler(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
-        _userRules = new UserRules(unitOfWork, encryptionService);
     }
 
     public async Task<OperationResult<VoidResult>> Handle(
         UserDeleteCommand request,
         CancellationToken cancellationToken)
     {
-        var user = await _userRules.GetByIdAsync(request.Id, cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdAsync(request.Id, cancellationToken);
 
         if (user is null)
         {
@@ -31,7 +28,7 @@ public sealed class UserDeleteHandler
                 detail: UserMessages.NotFound.WithId(request.Id.ToString()));
         }
 
-        _unitOfWork.Repository<User>().Delete(user);
+        _unitOfWork.Users.Delete(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

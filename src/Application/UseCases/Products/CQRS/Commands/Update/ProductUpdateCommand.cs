@@ -7,4 +7,5 @@ public sealed record ProductUpdateCommand(
     Guid Id,
     string Name,
     string? Description,
-    string? Barcode) : IRequest<OperationResult<VoidResult>>;
+    string? Barcode,
+    decimal UnitPrice) : IRequest<OperationResult<VoidResult>>;

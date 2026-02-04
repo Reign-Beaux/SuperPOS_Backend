@@ -1,7 +1,7 @@
+using Domain.Entities.Roles;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
-using Domain.Entities.Roles;
+using Domain.Repositories;
 
 namespace Application.UseCases.Roles.CQRS.Commands.Update;
 
@@ -9,19 +9,17 @@ public sealed class RoleUpdateHandler
     : IRequestHandler<RoleUpdateCommand, OperationResult<VoidResult>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly RoleRules _roleRules;
 
     public RoleUpdateHandler(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
-        _roleRules = new RoleRules(unitOfWork);
     }
 
     public async Task<OperationResult<VoidResult>> Handle(
         RoleUpdateCommand request,
         CancellationToken cancellationToken)
     {
-        var role = await _roleRules.GetByIdAsync(request.Id, cancellationToken);
+        var role = await _unitOfWork.Roles.GetByIdAsync(request.Id, cancellationToken);
 
         if (role is null)
         {
@@ -30,19 +28,25 @@ public sealed class RoleUpdateHandler
                 detail: RoleMessages.NotFound.WithId(request.Id.ToString()));
         }
 
-        request.Adapt(role);
-
-        var validationResult = await _roleRules.EnsureUniquenessAsync(
-            role,
-            isUpdate: true,
-            cancellationToken);
-
-        if (!validationResult.IsSuccess)
+        // Check name uniqueness if name changed
+        if (request.Name != role.Name)
         {
-            return validationResult;
+            var nameExists = await _unitOfWork.Roles.ExistsByNameAsync(
+                request.Name,
+                excludeId: role.Id,
+                cancellationToken);
+
+            if (nameExists)
+            {
+                return Result.Error(
+                    ErrorResult.Exists,
+                    detail: RoleMessages.AlreadyExists.WithName(request.Name));
+            }
         }
 
-        _unitOfWork.Repository<Role>().Update(role);
+        request.Adapt(role);
+
+        _unitOfWork.Roles.Update(role);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

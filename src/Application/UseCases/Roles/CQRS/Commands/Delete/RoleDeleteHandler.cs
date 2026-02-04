@@ -1,7 +1,7 @@
+using Domain.Entities.Roles;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
-using Domain.Entities.Roles;
+using Domain.Repositories;
 
 namespace Application.UseCases.Roles.CQRS.Commands.Delete;
 
@@ -9,19 +9,17 @@ public sealed class RoleDeleteHandler
     : IRequestHandler<RoleDeleteCommand, OperationResult<VoidResult>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly RoleRules _roleRules;
 
     public RoleDeleteHandler(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
-        _roleRules = new RoleRules(unitOfWork);
     }
 
     public async Task<OperationResult<VoidResult>> Handle(
         RoleDeleteCommand request,
         CancellationToken cancellationToken)
     {
-        var role = await _roleRules.GetByIdAsync(request.Id, cancellationToken);
+        var role = await _unitOfWork.Roles.GetByIdAsync(request.Id, cancellationToken);
 
         if (role is null)
         {
@@ -30,7 +28,7 @@ public sealed class RoleDeleteHandler
                 detail: RoleMessages.NotFound.WithId(request.Id.ToString()));
         }
 
-        _unitOfWork.Repository<Role>().Delete(role);
+        _unitOfWork.Roles.Delete(role);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

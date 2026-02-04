@@ -1,28 +1,27 @@
+using Domain.Entities.Users;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence;
-using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.UseCases.Users.DTOs;
-using Domain.Entities.Users;
+using Domain.Repositories;
 
 namespace Application.UseCases.Users.CQRS.Queries.GetById;
 
 public sealed class UserGetByIdHandler : IRequestHandler<UserGetByIdQuery, OperationResult<UserDTO>>
 {
     private readonly IMapper _mapper;
-    private readonly IRepository<User> _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public UserGetByIdHandler(IMapper mapper, IUnitOfWork unitOfWork)
     {
         _mapper = mapper;
-        _userRepository = unitOfWork.Repository<User>();
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<OperationResult<UserDTO>> Handle(
         UserGetByIdQuery request,
         CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(request.Id, cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdAsync(request.Id, cancellationToken);
 
         if (user is null)
         {

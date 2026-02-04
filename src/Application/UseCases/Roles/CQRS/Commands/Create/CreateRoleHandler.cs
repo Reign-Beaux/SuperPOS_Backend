@@ -1,9 +1,8 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.UseCases.Roles.DTOs;
 using Domain.Entities.Roles;
-using MapsterMapper;
+using Domain.Repositories;
 
 namespace Application.UseCases.Roles.CQRS.Commands.Create;
 
@@ -12,30 +11,30 @@ public sealed class CreateRoleHandler
 {
     private readonly IMapper _mapper;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly RoleRules _roleRules;
 
     public CreateRoleHandler(IMapper mapper, IUnitOfWork unitOfWork)
     {
         _mapper = mapper;
         _unitOfWork = unitOfWork;
-        _roleRules = new RoleRules(unitOfWork);
     }
 
     public async Task<OperationResult<RoleDTO>> Handle(
         CreateRoleCommand request,
         CancellationToken cancellationToken)
     {
+        // Check name uniqueness
+        var nameExists = await _unitOfWork.Roles.ExistsByNameAsync(
+            request.Name,
+            cancellationToken: cancellationToken);
+
+        if (nameExists)
+            return Result.Error(
+                ErrorResult.Exists,
+                detail: RoleMessages.AlreadyExists.WithName(request.Name));
+
         var role = _mapper.Map<Role>(request);
 
-        var validationResult = await _roleRules.EnsureUniquenessAsync(
-            role,
-            isUpdate: false,
-            cancellationToken);
-
-        if (!validationResult.IsSuccess)
-            return validationResult;
-
-        _unitOfWork.Repository<Role>().Add(role);
+        _unitOfWork.Roles.Add(role);
 
         var affectedRows = await _unitOfWork.SaveChangesAsync(cancellationToken);
 

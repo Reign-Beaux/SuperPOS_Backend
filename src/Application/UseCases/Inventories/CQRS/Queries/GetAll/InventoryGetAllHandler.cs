@@ -1,6 +1,6 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
+using Domain.Repositories;
 using Application.UseCases.Inventories.DTOs;
 using Domain.Entities.Inventories;
 using Domain.Entities.Products;

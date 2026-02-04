@@ -1,8 +1,10 @@
+using Domain.Entities.Users;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.Interfaces.Services;
-using Domain.Entities.Users;
+using Domain.Repositories;
+using Domain.Services;
+using Domain.ValueObjects;
 
 namespace Application.UseCases.Users.CQRS.Commands.Update;
 
@@ -10,19 +12,24 @@ public sealed class UserUpdateHandler
     : IRequestHandler<UserUpdateCommand, OperationResult<VoidResult>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly UserRules _userRules;
+    private readonly IUserUniquenessChecker _uniquenessChecker;
+    private readonly IEncryptionService _encryptionService;
 
-    public UserUpdateHandler(IUnitOfWork unitOfWork, IEncryptionService encryptionService)
+    public UserUpdateHandler(
+        IUnitOfWork unitOfWork,
+        IUserUniquenessChecker uniquenessChecker,
+        IEncryptionService encryptionService)
     {
         _unitOfWork = unitOfWork;
-        _userRules = new UserRules(unitOfWork, encryptionService);
+        _uniquenessChecker = uniquenessChecker;
+        _encryptionService = encryptionService;
     }
 
     public async Task<OperationResult<VoidResult>> Handle(
         UserUpdateCommand request,
         CancellationToken cancellationToken)
     {
-        var user = await _userRules.GetByIdAsync(request.Id, cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdAsync(request.Id, cancellationToken);
 
         if (user is null)
         {
@@ -31,24 +38,42 @@ public sealed class UserUpdateHandler
                 detail: UserMessages.NotFound.WithId(request.Id.ToString()));
         }
 
-        request.Adapt(user);
+        // Check email uniqueness if email changed
+        if (request.Email != user.Email)
+        {
+            var isEmailUnique = await _uniquenessChecker.IsEmailUniqueAsync(
+                request.Email,
+                excludeId: user.Id,
+                cancellationToken);
 
+            if (!isEmailUnique)
+            {
+                return Result.Error(
+                    ErrorResult.Exists,
+                    detail: UserMessages.AlreadyExists.WithEmail(request.Email));
+            }
+        }
+
+        // Update user info using domain methods
+        var name = PersonName.Create(request.Name, request.FirstLastname, request.SecondLastname);
+        var phone = string.IsNullOrWhiteSpace(request.Phone) ? null : PhoneNumber.Create(request.Phone);
+        user.UpdateInfo(name, phone);
+
+        // Update email if changed
+        if (request.Email != user.Email)
+        {
+            var email = Email.Create(request.Email);
+            user.UpdateEmail(email);
+        }
+
+        // Change password if provided
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
-            user.PasswordHashed = _userRules.HashPassword(request.Password);
+            var hashedPassword = _encryptionService.HashText(request.Password);
+            user.ChangePassword(hashedPassword);
         }
 
-        var validationResult = await _userRules.EnsureUniquenessAsync(
-            user,
-            isUpdate: true,
-            cancellationToken);
-
-        if (!validationResult.IsSuccess)
-        {
-            return validationResult;
-        }
-
-        _unitOfWork.Repository<User>().Update(user);
+        _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

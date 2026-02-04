@@ -2,7 +2,10 @@ using Domain.Entities.Users;
 
 namespace Domain.Entities.Roles;
 
-public class Role : BaseCatalog
+/// <summary>
+/// Role aggregate root representing a system role for authorization.
+/// </summary>
+public class Role : BaseCatalog, IAggregateRoot
 {
     public Role() { }
 

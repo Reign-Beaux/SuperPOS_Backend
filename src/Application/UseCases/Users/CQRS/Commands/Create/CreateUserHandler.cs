@@ -1,9 +1,11 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.Interfaces.Services;
 using Application.UseCases.Users.DTOs;
 using Domain.Entities.Users;
+using Domain.Repositories;
+using Domain.Services;
+using Domain.ValueObjects;
 
 namespace Application.UseCases.Users.CQRS.Commands.Create;
 
@@ -12,31 +14,51 @@ public sealed class CreateUserHandler
 {
     private readonly IMapper _mapper;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly UserRules _userRules;
+    private readonly IUserUniquenessChecker _uniquenessChecker;
+    private readonly IEncryptionService _encryptionService;
 
-    public CreateUserHandler(IMapper mapper, IUnitOfWork unitOfWork, IEncryptionService encryptionService)
+    public CreateUserHandler(
+        IMapper mapper,
+        IUnitOfWork unitOfWork,
+        IUserUniquenessChecker uniquenessChecker,
+        IEncryptionService encryptionService)
     {
         _mapper = mapper;
         _unitOfWork = unitOfWork;
-        _userRules = new UserRules(unitOfWork, encryptionService);
+        _uniquenessChecker = uniquenessChecker;
+        _encryptionService = encryptionService;
     }
 
     public async Task<OperationResult<UserDTO>> Handle(
         CreateUserCommand request,
         CancellationToken cancellationToken)
     {
-        var user = _mapper.Map<User>(request);
-        user.PasswordHashed = _userRules.HashPassword(request.Password);
+        // Validate email uniqueness
+        var isEmailUnique = await _uniquenessChecker.IsEmailUniqueAsync(
+            request.Email,
+            cancellationToken: cancellationToken);
 
-        var validationResult = await _userRules.EnsureUniquenessAsync(
-            user,
-            isUpdate: false,
-            cancellationToken);
+        if (!isEmailUnique)
+            return Result.Error(
+                ErrorResult.Exists,
+                detail: UserMessages.AlreadyExists.WithEmail(request.Email));
 
-        if (!validationResult.IsSuccess)
-            return validationResult;
+        // Hash password
+        var hashedPassword = _encryptionService.HashText(request.Password);
 
-        _unitOfWork.Repository<User>().Add(user);
+        // Create value objects
+        var name = PersonName.Create(request.Name, request.FirstLastname, request.SecondLastname);
+        var email = Email.Create(request.Email);
+
+        var phone = string.IsNullOrWhiteSpace(request.Phone)
+            ? null
+            : PhoneNumber.Create(request.Phone);
+
+        // Use domain factory method
+        var user = User.Create(name, email, hashedPassword, phone);
+
+        // Use specific repository
+        _unitOfWork.Users.Add(user);
 
         var affectedRows = await _unitOfWork.SaveChangesAsync(cancellationToken);
 

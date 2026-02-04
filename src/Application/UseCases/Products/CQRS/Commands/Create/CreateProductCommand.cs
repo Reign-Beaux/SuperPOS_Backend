@@ -7,5 +7,6 @@ namespace Application.UseCases.Products.CQRS.Commands.Create;
 public record CreateProductCommand(
     string Name,
     string? Description,
-    string? Barcode
+    string? Barcode,
+    decimal UnitPrice
 ) : IRequest<OperationResult<ProductDTO>>;
