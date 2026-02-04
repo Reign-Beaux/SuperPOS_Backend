@@ -4,7 +4,6 @@ using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.UseCases.Inventories.DTOs;
 using Domain.Entities.Inventories;
 using Domain.Entities.Products;
-using MapsterMapper;
 
 namespace Application.UseCases.Inventories.CQRS.Queries.GetByProductId;
 
@@ -26,13 +25,20 @@ public class InventoryGetByProductIdHandler : IRequestHandler<InventoryGetByProd
             cancellationToken
         );
 
-        if (inventory == null)
+        if (inventory is null || inventory.Quantity == 0)
         {
             return Result.Error(ErrorResult.NotFound, detail: InventoryMessages.NotFound.WithProductId(request.ProductId));
         }
 
         // Cargar el producto manualmente
-        inventory.Product = await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken);
+        var product = await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken);
+
+        if (product is null)
+        {
+            return Result.Error(ErrorResult.NotFound, detail: ProductMessages.NotFound.General);
+        }
+
+        inventory.Product = product;
 
         var dto = _mapper.Map<InventoryDTO>(inventory);
         return Result.Success(dto);

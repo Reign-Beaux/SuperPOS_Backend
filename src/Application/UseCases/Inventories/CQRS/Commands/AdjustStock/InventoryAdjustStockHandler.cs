@@ -4,7 +4,6 @@ using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.UseCases.Inventories.DTOs;
 using Domain.Entities.Inventories;
 using Domain.Entities.Products;
-using MapsterMapper;
 
 namespace Application.UseCases.Inventories.CQRS.Commands.AdjustStock;
 

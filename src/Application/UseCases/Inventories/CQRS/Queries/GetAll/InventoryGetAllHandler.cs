@@ -4,7 +4,6 @@ using Application.Interfaces.Persistence.UnitOfWorks;
 using Application.UseCases.Inventories.DTOs;
 using Domain.Entities.Inventories;
 using Domain.Entities.Products;
-using MapsterMapper;
 
 namespace Application.UseCases.Inventories.CQRS.Queries.GetAll;
 
@@ -27,7 +26,9 @@ public class InventoryGetAllHandler : IRequestHandler<InventoryGetAllQuery, Oper
         var inventoryList = inventories.ToList();
         foreach (var inventory in inventoryList)
         {
-            inventory.Product = await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken);
+            var currentProduct = await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken);
+            if (currentProduct is not null)
+                inventory.Product = currentProduct;
         }
 
         var dtos = _mapper.Map<List<InventoryDTO>>(inventoryList);
