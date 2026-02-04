@@ -1,7 +1,7 @@
 using Domain.Repositories;
 using Domain.Services;
 
-namespace Infrastructure.Services;
+namespace Infrastructure.Services.Domain;
 
 /// <summary>
 /// Implementation of user uniqueness checker using the repository.

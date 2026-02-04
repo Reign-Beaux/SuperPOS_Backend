@@ -3,7 +3,7 @@ using Domain.Repositories;
 using Domain.Services;
 using Domain.ValueObjects;
 
-namespace Infrastructure.Services;
+namespace Infrastructure.Services.Domain;
 
 /// <summary>
 /// Implementation of stock reservation service.
@@ -56,13 +56,13 @@ public class StockReservationService : IStockReservationService
 
             return (true, string.Empty);
         }
-        catch (Domain.Exceptions.InsufficientStockException ex)
+        catch (global::Domain.Exceptions.InsufficientStockException ex)
         {
             // Rollback any changes made so far
             await RollbackReservationAsync();
             return (false, ex.Message);
         }
-        catch (Domain.Exceptions.InvalidQuantityException ex)
+        catch (global::Domain.Exceptions.InvalidQuantityException ex)
         {
             // Rollback any changes made so far
             await RollbackReservationAsync();

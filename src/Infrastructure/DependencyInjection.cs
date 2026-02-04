@@ -2,11 +2,11 @@ using Application.Events;
 using Application.Interfaces.Services;
 using Domain.Repositories;
 using Domain.Services;
-using Infrastructure.Events;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
-using Infrastructure.Services;
+using Infrastructure.Services.Application;
+using Infrastructure.Services.Domain;
 
 namespace Infrastructure;
 

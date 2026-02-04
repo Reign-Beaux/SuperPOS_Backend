@@ -1,7 +1,7 @@
 ﻿using Application.Interfaces.Services;
 using BC = BCrypt.Net.BCrypt;
 
-namespace Infrastructure.Services;
+namespace Infrastructure.Services.Application;
 
 public class EncryptionService : IEncryptionService
 {

@@ -2,7 +2,7 @@ using Application.Events;
 using Domain.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.Events;
+namespace Infrastructure.Services.Application;
 
 /// <summary>
 /// Simple domain event dispatcher implementation.
