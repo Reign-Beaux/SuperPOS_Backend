@@ -1,6 +1,8 @@
+using Application.Events;
 using Application.Interfaces.Services;
 using Domain.Repositories;
 using Domain.Services;
+using Infrastructure.Events;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
@@ -50,6 +52,9 @@ public static class DependencyInjection
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped<IEncryptionService, EncryptionService>();
+
+        // Domain Event Dispatcher
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
         // Domain services
         services.AddScoped<IProductUniquenessChecker, ProductUniquenessChecker>();

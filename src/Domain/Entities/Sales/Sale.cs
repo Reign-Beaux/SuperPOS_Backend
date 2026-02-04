@@ -1,5 +1,6 @@
 using Domain.Entities.Customers;
 using Domain.Entities.Users;
+using Domain.Events.Sales;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
@@ -97,6 +98,18 @@ public class Sale : BaseEntity, IAggregateRoot
 
         // Calculate and set total
         sale.RecalculateTotal();
+
+        // Raise domain event
+        var saleItems = items.Select(i =>
+            new SaleCreatedEvent.SaleItemInfo(i.ProductId, i.Quantity.Value, i.UnitPrice.Amount))
+            .ToList();
+
+        sale.AddDomainEvent(new SaleCreatedEvent(
+            sale.Id,
+            sale.CustomerId,
+            sale.UserId,
+            sale.TotalAmount,
+            saleItems));
 
         return sale;
     }

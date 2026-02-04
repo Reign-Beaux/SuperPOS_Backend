@@ -1,4 +1,5 @@
 using Domain.Entities.Sales;
+using Domain.Events.Products;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
@@ -52,7 +53,7 @@ public class Product : BaseCatalog, IAggregateRoot
         if (unitPrice.Amount <= 0)
             throw new BusinessRuleViolationException("PRODUCT_003", "Product price must be positive");
 
-        return new Product
+        var product = new Product
         {
             Name = name.Trim(),
             Description = description?.Trim() ?? string.Empty,
@@ -61,6 +62,15 @@ public class Product : BaseCatalog, IAggregateRoot
             _barcode = barcode,
             _unitPrice = unitPrice
         };
+
+        // Raise domain event
+        product.AddDomainEvent(new ProductCreatedEvent(
+            product.Id,
+            product.Name,
+            product.Barcode,
+            product.UnitPrice));
+
+        return product;
     }
 
     /// <summary>
@@ -74,9 +84,14 @@ public class Product : BaseCatalog, IAggregateRoot
         if (newPrice.Amount == UnitPrice)
             return; // No change needed
 
+        var oldPrice = UnitPrice;
+
         UnitPrice = newPrice.Amount;
         _unitPrice = newPrice;
         UpdatedAt = DateTime.UtcNow;
+
+        // Raise domain event
+        AddDomainEvent(new ProductPriceChangedEvent(Id, oldPrice, newPrice.Amount));
     }
 
     /// <summary>

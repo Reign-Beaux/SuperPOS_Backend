@@ -1,4 +1,6 @@
+using Application.Events;
 using Domain.Entities;
+using Domain.Events;
 using Domain.Repositories;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
@@ -7,10 +9,12 @@ namespace Infrastructure.Persistence;
 
 /// <summary>
 /// Unit of Work implementation coordinating transactions across repositories.
+/// Handles domain event dispatching after successful persistence.
 /// </summary>
 public class UnitOfWork : IUnitOfWork
 {
     private readonly SuperPOSDbContext _context;
+    private readonly IDomainEventDispatcher _eventDispatcher;
     private IDbContextTransaction? _transaction;
     private readonly Dictionary<Type, object> _repositories = [];
     private bool _disposed = false;
@@ -23,9 +27,10 @@ public class UnitOfWork : IUnitOfWork
     private IInventoryRepository? _inventories;
     private IRoleRepository? _roles;
 
-    public UnitOfWork(SuperPOSDbContext context)
+    public UnitOfWork(SuperPOSDbContext context, IDomainEventDispatcher eventDispatcher)
     {
         _context = context;
+        _eventDispatcher = eventDispatcher;
     }
 
     // Specific repository properties with lazy initialization
@@ -56,7 +61,33 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.SaveChangesAsync(cancellationToken);
+        // Collect domain events from all entities before saving
+        var entitiesWithEvents = _context.ChangeTracker
+            .Entries<IHasDomainEvents>()
+            .Where(e => e.Entity.DomainEvents.Any())
+            .Select(e => e.Entity)
+            .ToList();
+
+        var domainEvents = entitiesWithEvents
+            .SelectMany(e => e.DomainEvents)
+            .ToList();
+
+        // Clear events from entities before saving to avoid duplicate dispatch
+        foreach (var entity in entitiesWithEvents)
+        {
+            entity.ClearDomainEvents();
+        }
+
+        // Save changes to database
+        var result = await _context.SaveChangesAsync(cancellationToken);
+
+        // Dispatch events after successful persistence
+        if (domainEvents.Any())
+        {
+            await _eventDispatcher.DispatchManyAsync(domainEvents, cancellationToken);
+        }
+
+        return result;
     }
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)

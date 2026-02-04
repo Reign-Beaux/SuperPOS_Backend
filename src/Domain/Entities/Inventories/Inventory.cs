@@ -1,4 +1,5 @@
 using Domain.Entities.Products;
+using Domain.Events.Inventories;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 
@@ -57,6 +58,13 @@ public class Inventory : BaseEntity, IAggregateRoot
         Quantity = newQuantity.Value;
         _quantity = newQuantity;
         UpdatedAt = DateTime.UtcNow;
+
+        // Raise domain event
+        AddDomainEvent(new StockAddedEvent(
+            Id,
+            ProductId,
+            quantity.Value,
+            Quantity));
     }
 
     /// <summary>
@@ -83,6 +91,24 @@ public class Inventory : BaseEntity, IAggregateRoot
         Quantity = newQuantity.Value;
         _quantity = newQuantity;
         UpdatedAt = DateTime.UtcNow;
+
+        // Raise stock decremented event
+        AddDomainEvent(new StockDecrementedEvent(
+            Id,
+            ProductId,
+            quantity.Value,
+            Quantity));
+
+        // Check for low stock and raise event if needed
+        const int lowStockThreshold = 10;
+        if (IsLowStock(lowStockThreshold))
+        {
+            AddDomainEvent(new LowStockEvent(
+                Id,
+                ProductId,
+                Quantity,
+                lowStockThreshold));
+        }
     }
 
     /// <summary>
