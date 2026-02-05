@@ -1,3 +1,4 @@
+using Domain.Entities.Roles;
 using Domain.Entities.Users;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
@@ -38,6 +39,16 @@ public sealed class UserUpdateHandler
                 detail: UserMessages.NotFound.WithId(request.Id.ToString()));
         }
 
+        // Validate role exists if changed
+        if (request.RoleId != user.RoleId)
+        {
+            var role = await _unitOfWork.Repository<Role>().GetByIdAsync(request.RoleId, cancellationToken);
+            if (role is null)
+                return Result.Error(
+                    ErrorResult.NotFound,
+                    detail: $"Role with ID {request.RoleId} not found");
+        }
+
         // Check email uniqueness if email changed
         if (request.Email != user.Email)
         {
@@ -64,6 +75,12 @@ public sealed class UserUpdateHandler
         {
             var email = Email.Create(request.Email);
             user.UpdateEmail(email);
+        }
+
+        // Update role if changed
+        if (request.RoleId != user.RoleId)
+        {
+            user.UpdateRole(request.RoleId);
         }
 
         // Change password if provided

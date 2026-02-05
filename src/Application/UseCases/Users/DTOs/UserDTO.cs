@@ -8,4 +8,6 @@ public class UserDTO
     public string? SecondLastname { get; set; }
     public required string Email { get; set; }
     public string? Phone { get; set; }
+    public Guid RoleId { get; set; }
+    public string? RoleName { get; set; }
 }

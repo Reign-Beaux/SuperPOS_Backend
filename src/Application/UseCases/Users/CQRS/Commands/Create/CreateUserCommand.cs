@@ -10,5 +10,6 @@ public record CreateUserCommand(
     string? SecondLastname,
     string Email,
     string Password,
-    string? Phone
+    string? Phone,
+    Guid RoleId
 ) : IRequest<OperationResult<UserDTO>>;

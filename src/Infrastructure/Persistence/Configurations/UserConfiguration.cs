@@ -31,18 +31,23 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Phone)
           .HasMaxLength(20);
 
+        builder.Property(u => u.RoleId)
+          .IsRequired();
+
         builder.HasIndex(u => u.Email)
           .IsUnique();
 
+        builder.HasIndex(u => u.RoleId);
+
         // Relationships
+        builder.HasOne(u => u.Role)
+          .WithMany(r => r.Users)
+          .HasForeignKey(u => u.RoleId)
+          .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(u => u.Sales)
           .WithOne(s => s.User)
           .HasForeignKey(s => s.UserId)
           .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(u => u.UserRoles)
-          .WithOne(ur => ur.User)
-          .HasForeignKey(ur => ur.UserId)
-          .OnDelete(DeleteBehavior.Cascade);
     }
 }

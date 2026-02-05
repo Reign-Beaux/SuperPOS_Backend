@@ -10,5 +10,5 @@ public class Role : BaseCatalog, IAggregateRoot
     public Role() { }
 
     // Navigation Properties
-    public ICollection<UserRole> UserRoles { get; set; } = [];
+    public ICollection<User> Users { get; set; } = [];
 }

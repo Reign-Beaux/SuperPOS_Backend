@@ -2,6 +2,7 @@ using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Application.Interfaces.Services;
 using Application.UseCases.Users.DTOs;
+using Domain.Entities.Roles;
 using Domain.Entities.Users;
 using Domain.Repositories;
 using Domain.Services;
@@ -33,6 +34,14 @@ public sealed class CreateUserHandler
         CreateUserCommand request,
         CancellationToken cancellationToken)
     {
+        // Validate role exists
+        var role = await _unitOfWork.Repository<Role>().GetByIdAsync(request.RoleId, cancellationToken);
+        if (role is null)
+            return new OperationResult<UserDTO>(
+                StatusResult.NotFound,
+                default!,
+                new Error { Title = "Not Found", Detail = $"Role with ID {request.RoleId} not found" });
+
         // Validate email uniqueness
         var isEmailUnique = await _uniquenessChecker.IsEmailUniqueAsync(
             request.Email,
@@ -55,7 +64,7 @@ public sealed class CreateUserHandler
             : PhoneNumber.Create(request.Phone);
 
         // Use domain factory method
-        var user = User.Create(name, email, hashedPassword, phone);
+        var user = User.Create(name, email, hashedPassword, request.RoleId, phone);
 
         // Use specific repository
         _unitOfWork.Users.Add(user);

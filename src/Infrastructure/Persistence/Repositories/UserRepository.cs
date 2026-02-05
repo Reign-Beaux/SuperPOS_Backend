@@ -42,7 +42,7 @@ public sealed class UserRepository : RepositoryBase<User>, IUserRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<User?> GetByEmailWithRolesAsync(string email, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByEmailWithRoleAsync(string email, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(email))
             return null;
@@ -55,38 +55,23 @@ public sealed class UserRepository : RepositoryBase<User>, IUserRepository
 
         if (user != null)
         {
-            await LoadUserRolesAsync(user, cancellationToken);
+            user.Role = (await _context.Set<Role>()
+                .FirstOrDefaultAsync(r => r.Id == user.RoleId && r.DeletedAt == null, cancellationToken))!;
         }
 
         return user;
     }
 
-    public async Task<User?> GetByIdWithRolesAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByIdWithRoleAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var user = await GetByIdAsync(id, cancellationToken);
 
         if (user != null)
         {
-            await LoadUserRolesAsync(user, cancellationToken);
+            user.Role = (await _context.Set<Role>()
+                .FirstOrDefaultAsync(r => r.Id == user.RoleId && r.DeletedAt == null, cancellationToken))!;
         }
 
         return user;
-    }
-
-    private async Task LoadUserRolesAsync(User user, CancellationToken cancellationToken)
-    {
-        // Load UserRoles
-        var userRoles = await _context.Set<UserRole>()
-            .Where(ur => ur.UserId == user.Id)
-            .ToListAsync(cancellationToken);
-
-        user.UserRoles = userRoles;
-
-        // Load Role entities for each UserRole
-        foreach (var userRole in userRoles)
-        {
-            userRole.Role = (await _context.Set<Role>()
-                .FirstOrDefaultAsync(r => r.Id == userRole.RoleId && r.DeletedAt == null, cancellationToken))!;
-        }
     }
 }

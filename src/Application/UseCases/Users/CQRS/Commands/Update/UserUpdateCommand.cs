@@ -10,4 +10,5 @@ public sealed record UserUpdateCommand(
     string? SecondLastname,
     string Email,
     string? Password,
-    string? Phone) : IRequest<OperationResult<VoidResult>>;
+    string? Phone,
+    Guid RoleId) : IRequest<OperationResult<VoidResult>>;

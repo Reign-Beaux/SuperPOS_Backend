@@ -19,10 +19,6 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.HasIndex(r => r.Name)
           .IsUnique();
 
-        // Relationships
-        builder.HasMany(r => r.UserRoles)
-          .WithOne(ur => ur.Role)
-          .HasForeignKey(ur => ur.RoleId)
-          .OnDelete(DeleteBehavior.Cascade);
+        // Note: Role-User relationship is configured in UserConfiguration
     }
 }

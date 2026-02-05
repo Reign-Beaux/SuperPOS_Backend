@@ -21,12 +21,12 @@ public interface IUserRepository : IRepositoryBase<User>
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets a user by email with their associated roles loaded.
+    /// Gets a user by email with their associated role loaded.
     /// </summary>
-    Task<User?> GetByEmailWithRolesAsync(string email, CancellationToken cancellationToken = default);
+    Task<User?> GetByEmailWithRoleAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets a user by ID with their associated roles loaded.
+    /// Gets a user by ID with their associated role loaded.
     /// </summary>
-    Task<User?> GetByIdWithRolesAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<User?> GetByIdWithRoleAsync(Guid id, CancellationToken cancellationToken = default);
 }

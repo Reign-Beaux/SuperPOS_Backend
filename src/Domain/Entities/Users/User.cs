@@ -1,3 +1,4 @@
+using Domain.Entities.Roles;
 using Domain.Entities.Sales;
 using Domain.Exceptions;
 using Domain.ValueObjects;
@@ -24,6 +25,7 @@ public class User : BaseEntity, IAggregateRoot
     public string Email { get; set; } = string.Empty;
     public string PasswordHashed { get; set; } = string.Empty;
     public string? Phone { get; set; }
+    public Guid RoleId { get; set; }
 
     // Value Object properties for domain logic
     public PersonName NameValue
@@ -46,7 +48,7 @@ public class User : BaseEntity, IAggregateRoot
 
     // Navigation Properties
     public ICollection<Sale> Sales { get; set; } = [];
-    public ICollection<UserRole> UserRoles { get; set; } = [];
+    public Role Role { get; set; } = null!;
 
     /// <summary>
     /// Factory method to create a new User with valid values.
@@ -56,6 +58,7 @@ public class User : BaseEntity, IAggregateRoot
         PersonName name,
         Email email,
         string hashedPassword,
+        Guid roleId,
         PhoneNumber? phone = null)
     {
         if (string.IsNullOrWhiteSpace(hashedPassword))
@@ -63,6 +66,9 @@ public class User : BaseEntity, IAggregateRoot
 
         if (hashedPassword.Length < 10)
             throw new BusinessRuleViolationException("USER_002", "Invalid password hash format");
+
+        if (roleId == Guid.Empty)
+            throw new BusinessRuleViolationException("USER_003", "RoleId cannot be empty");
 
         return new User
         {
@@ -72,6 +78,7 @@ public class User : BaseEntity, IAggregateRoot
             Email = email.Value,
             PasswordHashed = hashedPassword,
             Phone = phone?.Value,
+            RoleId = roleId,
             _name = name,
             _email = email,
             _phone = phone
@@ -163,12 +170,17 @@ public class User : BaseEntity, IAggregateRoot
     public bool HasPhone() => !string.IsNullOrWhiteSpace(Phone);
 
     /// <summary>
-    /// Checks if the user has any assigned roles.
+    /// Updates the user's role.
     /// </summary>
-    public bool HasRoles() => UserRoles?.Any() == true;
+    public void UpdateRole(Guid roleId)
+    {
+        if (roleId == Guid.Empty)
+            throw new BusinessRuleViolationException("USER_003", "RoleId cannot be empty");
 
-    /// <summary>
-    /// Gets the count of assigned roles.
-    /// </summary>
-    public int GetRoleCount() => UserRoles?.Count ?? 0;
+        if (RoleId == roleId)
+            return; // No change needed
+
+        RoleId = roleId;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
