@@ -85,8 +85,8 @@ public sealed class UserRepository : RepositoryBase<User>, IUserRepository
         // Load Role entities for each UserRole
         foreach (var userRole in userRoles)
         {
-            userRole.Role = await _context.Set<Role>()
-                .FirstOrDefaultAsync(r => r.Id == userRole.RoleId && r.DeletedAt == null, cancellationToken);
+            userRole.Role = (await _context.Set<Role>()
+                .FirstOrDefaultAsync(r => r.Id == userRole.RoleId && r.DeletedAt == null, cancellationToken))!;
         }
     }
 }

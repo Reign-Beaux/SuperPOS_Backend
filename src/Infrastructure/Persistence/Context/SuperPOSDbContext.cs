@@ -5,6 +5,7 @@ using Domain.Entities.Inventories;
 using Domain.Entities.Roles;
 using Domain.Entities.Sales;
 using Domain.Entities.Users;
+using Domain.ValueObjects;
 
 namespace Infrastructure.Persistence.Context;
 
@@ -21,6 +22,14 @@ public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : Db
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Ignore value objects - they are stored as primitives in entities
+        modelBuilder.Ignore<Barcode>();
+        modelBuilder.Ignore<Money>();
+        modelBuilder.Ignore<Quantity>();
+        modelBuilder.Ignore<Email>();
+        modelBuilder.Ignore<PhoneNumber>();
+        modelBuilder.Ignore<PersonName>();
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(SuperPOSDbContext).Assembly);
     }
 

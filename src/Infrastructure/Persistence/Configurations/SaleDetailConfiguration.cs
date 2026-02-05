@@ -9,7 +9,9 @@ public sealed class SaleDetailConfiguration : IEntityTypeConfiguration<SaleDetai
         builder.ToTable("SaleDetails");
         builder.HasKey(sd => sd.Id);
 
+        // Explicitly configure SaleId as a mapped property
         builder.Property(sd => sd.SaleId)
+          .HasColumnName("SaleId")
           .IsRequired();
 
         builder.Property(sd => sd.ProductId)

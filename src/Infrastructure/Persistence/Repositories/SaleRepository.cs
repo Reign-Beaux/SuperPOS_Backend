@@ -67,12 +67,12 @@ public sealed class SaleRepository : RepositoryBase<Sale>, ISaleRepository
     private async Task LoadSaleDetailsAsync(Sale sale, CancellationToken cancellationToken)
     {
         // Load Customer
-        sale.Customer = await _context.Set<Customer>()
-            .FirstOrDefaultAsync(c => c.Id == sale.CustomerId && c.DeletedAt == null, cancellationToken);
+        sale.Customer = (await _context.Set<Customer>()
+            .FirstOrDefaultAsync(c => c.Id == sale.CustomerId && c.DeletedAt == null, cancellationToken))!;
 
         // Load User
-        sale.User = await _context.Set<User>()
-            .FirstOrDefaultAsync(u => u.Id == sale.UserId && u.DeletedAt == null, cancellationToken);
+        sale.User = (await _context.Set<User>()
+            .FirstOrDefaultAsync(u => u.Id == sale.UserId && u.DeletedAt == null, cancellationToken))!;
 
         // Load SaleDetails
         var saleDetails = await _context.Set<SaleDetail>()
@@ -84,8 +84,8 @@ public sealed class SaleRepository : RepositoryBase<Sale>, ISaleRepository
         // Load Product for each SaleDetail
         foreach (var detail in saleDetails)
         {
-            detail.Product = await _context.Set<Product>()
-                .FirstOrDefaultAsync(p => p.Id == detail.ProductId && p.DeletedAt == null, cancellationToken);
+            detail.Product = (await _context.Set<Product>()
+                .FirstOrDefaultAsync(p => p.Id == detail.ProductId && p.DeletedAt == null, cancellationToken))!;
         }
     }
 }

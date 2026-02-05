@@ -19,8 +19,8 @@ public class SaleDetail : BaseEntity
     // Parameterless constructor required by EF Core
     public SaleDetail() { }
 
-    // Primitive properties for EF Core persistence - all with private setters for immutability
-    public Guid SaleId { get; internal set; }
+    // Primitive properties for EF Core persistence
+    public Guid SaleId { get; set; }  // Public setter required by EF Core for foreign key
     public Guid ProductId { get; private set; }
     public int Quantity { get; private set; }
     public decimal UnitPrice { get; private set; }

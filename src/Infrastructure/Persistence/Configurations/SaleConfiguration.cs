@@ -9,6 +9,9 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.ToTable("Sales");
         builder.HasKey(s => s.Id);
 
+        // Ignore read-only property - use SaleDetails for EF Core navigation
+        builder.Ignore(s => s.SaleDetailsReadOnly);
+
         builder.Property(s => s.CustomerId)
           .IsRequired();
 
@@ -34,9 +37,6 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
           .HasForeignKey(s => s.UserId)
           .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(s => s.SaleDetails)
-          .WithOne(sd => sd.Sale)
-          .HasForeignKey(sd => sd.SaleId)
-          .OnDelete(DeleteBehavior.Cascade);
+        // Note: Sale-SaleDetail relationship is configured in SaleDetailConfiguration
     }
 }
