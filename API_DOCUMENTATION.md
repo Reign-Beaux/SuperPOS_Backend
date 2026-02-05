@@ -26,7 +26,7 @@
 
 ## Introducción
 
-**SuperPOS Backend** es una API REST construida con **C# / .NET 8** que implementa un sistema completo de gestión de punto de venta (POS). La API está diseñada siguiendo principios de arquitectura limpia y patrones empresariales como CQRS (Command Query Responsibility Segregation) y Mediator Pattern.
+**SuperPOS Backend** es una API REST construida con **C# / .NET 10** que implementa un sistema completo de gestión de punto de venta (POS). La API está diseñada siguiendo principios de arquitectura limpia y patrones empresariales como CQRS (Command Query Responsibility Segregation) y Mediator Pattern.
 
 ### Características principales:
 
