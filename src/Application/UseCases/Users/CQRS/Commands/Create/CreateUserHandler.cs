@@ -76,6 +76,9 @@ public sealed class CreateUserHandler
                 ErrorResult.BadRequest,
                 detail: UserMessages.Create.Failed);
 
+        // Load Role for response
+        user.Role = role;
+
         var userDto = _mapper.Map<UserDTO>(user);
 
         return new OperationResult<UserDTO>(StatusResult.Created, userDto);

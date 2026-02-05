@@ -2,7 +2,7 @@ using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Domain.Repositories;
 using Application.UseCases.Users.DTOs;
-using Domain.Entities.Users;
+using Domain.Entities.Roles;
 
 namespace Application.UseCases.Users.CQRS.Queries.GetAll;
 
@@ -22,6 +22,12 @@ public sealed class UserGetAllHandler : IRequestHandler<UserGetAllQuery, Operati
         CancellationToken cancellationToken)
     {
         var users = await _unitOfWork.Users.GetAllAsync(cancellationToken);
+
+        // Load Role for each user
+        foreach (var user in users)
+        {
+            user.Role = (await _unitOfWork.Repository<Role>().GetByIdAsync(user.RoleId, cancellationToken))!;
+        }
 
         var usersDto = _mapper.Map<IEnumerable<UserDTO>>(users);
 

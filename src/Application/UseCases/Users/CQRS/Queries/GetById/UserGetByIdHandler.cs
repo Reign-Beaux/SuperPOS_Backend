@@ -1,3 +1,4 @@
+using Domain.Entities.Roles;
 using Domain.Entities.Users;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
@@ -29,6 +30,9 @@ public sealed class UserGetByIdHandler : IRequestHandler<UserGetByIdQuery, Opera
                 ErrorResult.NotFound,
                 detail: UserMessages.NotFound.WithId(request.Id.ToString()));
         }
+
+        // Load Role
+        user.Role = (await _unitOfWork.Repository<Role>().GetByIdAsync(user.RoleId, cancellationToken))!;
 
         var userDto = _mapper.Map<UserDTO>(user);
 
