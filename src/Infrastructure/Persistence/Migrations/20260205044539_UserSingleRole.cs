@@ -14,12 +14,29 @@ namespace Infrastructure.Persistence.Migrations
             migrationBuilder.DropTable(
                 name: "UserRoles");
 
+            // Add RoleId column as nullable first
             migrationBuilder.AddColumn<Guid>(
                 name: "RoleId",
                 table: "Users",
                 type: "uniqueidentifier",
+                nullable: true);
+
+            // Update existing users: assign them to the first available role
+            migrationBuilder.Sql(@"
+                UPDATE Users
+                SET RoleId = (SELECT TOP 1 Id FROM Roles WHERE DeletedAt IS NULL ORDER BY CreatedAt)
+                WHERE RoleId IS NULL
+            ");
+
+            // Make RoleId required
+            migrationBuilder.AlterColumn<Guid>(
+                name: "RoleId",
+                table: "Users",
+                type: "uniqueidentifier",
                 nullable: false,
-                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
+                oldClrType: typeof(Guid),
+                oldType: "uniqueidentifier",
+                oldNullable: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_RoleId",
