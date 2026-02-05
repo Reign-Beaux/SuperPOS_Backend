@@ -1,7 +1,7 @@
 # 📚 SuperPOS Backend - Documentación Completa de API
 
-**Versión:** 1.0  
-**Última actualización:** 3 de febrero de 2026  
+**Versión:** 1.0
+**Última actualización:** 4 de febrero de 2026
 **Audiencia:** Equipos de Frontend (React) y IA (Gemini)
 
 ---
@@ -194,11 +194,16 @@ Todas las respuestas siguen este patrón:
   "firstLastname": "string",
   "secondLastname": "string | null",
   "email": "string",
-  "phone": "string | null"
+  "phone": "string | null",
+  "roleId": "uuid (GUID v7)",
+  "roleName": "string | null"
 }
 ```
 
-**Nota:** El campo `password` NUNCA se devuelve en la respuesta.
+**Notas:**
+- El campo `password` NUNCA se devuelve en la respuesta.
+- Cada usuario tiene asignado un único rol (`roleId`).
+- El campo `roleName` es informativo y se carga automáticamente desde la tabla de roles.
 
 #### RoleDTO
 
@@ -594,7 +599,22 @@ Content-Type: application/json
   "secondLastname": "string (opcional, máx 100 caracteres)",
   "email": "string (requerido, email válido)",
   "password": "string (requerido, mínimo 8 caracteres)",
-  "phone": "string (opcional)"
+  "phone": "string (opcional)",
+  "roleId": "uuid (requerido - ID del rol a asignar)"
+}
+```
+
+**Ejemplo:**
+
+```json
+{
+  "name": "Carlos",
+  "firstLastname": "Rodríguez",
+  "secondLastname": "Martínez",
+  "email": "carlos.rodriguez@example.com",
+  "password": "SecurePassword123!",
+  "phone": "+34 555123456",
+  "roleId": "550e8400-e29b-41d4-a716-446655440005"
 }
 ```
 
@@ -609,13 +629,31 @@ Content-Type: application/json
     "firstLastname": "Rodríguez",
     "secondLastname": "Martínez",
     "email": "carlos.rodriguez@example.com",
-    "phone": "+34 555123456"
+    "phone": "+34 555123456",
+    "roleId": "550e8400-e29b-41d4-a716-446655440005",
+    "roleName": "Gerente"
   },
   "error": null
 }
 ```
 
-**Nota:** El campo `password` se hashea en la base de datos y NUNCA se devuelve.
+**Response Error - Rol no encontrado (404):**
+
+```json
+{
+  "status": 404,
+  "value": null,
+  "error": {
+    "title": "Not Found",
+    "detail": "Role with ID 550e8400-e29b-41d4-a716-446655440005 not found"
+  }
+}
+```
+
+**Notas:**
+- El campo `password` se hashea en la base de datos y NUNCA se devuelve.
+- El `roleId` debe existir en la tabla de roles antes de crear el usuario.
+- Cada usuario tiene asignado exactamente un rol.
 
 ### Obtener Usuario por ID
 
@@ -634,7 +672,9 @@ GET /api/user/{id}
     "firstLastname": "Rodríguez",
     "secondLastname": "Martínez",
     "email": "carlos.rodriguez@example.com",
-    "phone": "+34 555123456"
+    "phone": "+34 555123456",
+    "roleId": "550e8400-e29b-41d4-a716-446655440005",
+    "roleName": "Gerente"
   },
   "error": null
 }
@@ -658,7 +698,19 @@ GET /api/user
       "firstLastname": "Rodríguez",
       "secondLastname": "Martínez",
       "email": "carlos.rodriguez@example.com",
-      "phone": "+34 555123456"
+      "phone": "+34 555123456",
+      "roleId": "550e8400-e29b-41d4-a716-446655440005",
+      "roleName": "Gerente"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440007",
+      "name": "Ana",
+      "firstLastname": "López",
+      "secondLastname": "García",
+      "email": "ana.lopez@example.com",
+      "phone": "+34 666777888",
+      "roleId": "550e8400-e29b-41d4-a716-446655440006",
+      "roleName": "Vendedor"
     }
   ],
   "error": null
@@ -682,7 +734,23 @@ Content-Type: application/json
   "secondLastname": "string (opcional)",
   "email": "string (requerido)",
   "password": "string (opcional - si se envía, se actualiza)",
-  "phone": "string (opcional)"
+  "phone": "string (opcional)",
+  "roleId": "uuid (requerido - ID del rol a asignar)"
+}
+```
+
+**Ejemplo:**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440004",
+  "name": "Carlos",
+  "firstLastname": "Rodríguez",
+  "secondLastname": "Martínez",
+  "email": "carlos.nuevo@example.com",
+  "password": null,
+  "phone": "+34 555999888",
+  "roleId": "550e8400-e29b-41d4-a716-446655440006"
 }
 ```
 
@@ -691,6 +759,24 @@ Content-Type: application/json
 ```
 Respuesta vacía
 ```
+
+**Response Error - Rol no encontrado (404):**
+
+```json
+{
+  "status": 404,
+  "value": null,
+  "error": {
+    "title": "Not Found",
+    "detail": "Role with ID 550e8400-e29b-41d4-a716-446655440006 not found"
+  }
+}
+```
+
+**Notas:**
+- Si `password` es `null` u omitido, la contraseña no se modifica.
+- El `roleId` debe existir en la tabla de roles.
+- Si se cambia el `roleId`, el usuario se asigna inmediatamente al nuevo rol.
 
 ### Eliminar Usuario
 
@@ -1335,7 +1421,8 @@ Content-Type: application/json
   "firstLastname": "Rodríguez",
   "secondLastname": "Martínez",
   "email": "carlos@example.com",
-  "password": "SecurePassword123!"
+  "password": "SecurePassword123!",
+  "roleId": "550e8400-e29b-41d4-a716-446655440006"
 }
 
 Response (201):
@@ -1343,6 +1430,8 @@ Response (201):
   "status": 201,
   "value": {
     "id": "550e8400-e29b-41d4-a716-446655440001",
+    "roleId": "550e8400-e29b-41d4-a716-446655440006",
+    "roleName": "Vendedor",
     ...
   }
 }
@@ -1576,6 +1665,6 @@ Authorization: Bearer <token>
 
 ---
 
-**Última actualización:** 3 de febrero de 2026  
-**Versión API:** 1.0  
+**Última actualización:** 4 de febrero de 2026
+**Versión API:** 1.0
 **Estado:** Producción Beta
