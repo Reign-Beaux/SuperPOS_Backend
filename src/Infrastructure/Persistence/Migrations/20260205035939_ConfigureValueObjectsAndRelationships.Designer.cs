@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SuperPOSDbContext))]
-    [Migration("20260205034035_IgnoreValueObjects")]
-    partial class IgnoreValueObjects
+    [Migration("20260205035939_ConfigureValueObjectsAndRelationships")]
+    partial class ConfigureValueObjectsAndRelationships
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
