@@ -30,7 +30,7 @@ public class InventoryAdjustStockHandler : IRequestHandler<InventoryAdjustStockC
         // Get or create inventory
         var inventory = await _unitOfWork.Inventories.GetByProductIdAsync(request.ProductId, cancellationToken);
 
-        var quantity = Quantity.Create(request.Quantity);
+        var quantity = Quantity.Create(request.Stock);
 
         try
         {

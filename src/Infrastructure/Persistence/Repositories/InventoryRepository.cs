@@ -24,15 +24,15 @@ public sealed class InventoryRepository : RepositoryBase<Inventory>, IInventoryR
     public async Task<IReadOnlyList<Inventory>> GetLowStockItemsAsync(int threshold = 10, CancellationToken cancellationToken = default)
     {
         return await _dbSet
-            .Where(i => i.Quantity <= threshold && i.Quantity > 0 && i.DeletedAt == null)
-            .OrderBy(i => i.Quantity)
+            .Where(i => i.Stock <= threshold && i.Stock > 0 && i.DeletedAt == null)
+            .OrderBy(i => i.Stock)
             .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<Inventory>> GetOutOfStockItemsAsync(CancellationToken cancellationToken = default)
     {
         return await _dbSet
-            .Where(i => i.Quantity == 0 && i.DeletedAt == null)
+            .Where(i => i.Stock == 0 && i.DeletedAt == null)
             .ToListAsync(cancellationToken);
     }
 

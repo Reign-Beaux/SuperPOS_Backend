@@ -6,6 +6,6 @@ namespace Application.UseCases.Inventories.CQRS.Commands.AdjustStock;
 
 public record InventoryAdjustStockCommand(
     Guid ProductId,
-    int Quantity,
+    int Stock,
     InventoryOperation Operation
 ) : IRequest<OperationResult<InventoryDTO>>;

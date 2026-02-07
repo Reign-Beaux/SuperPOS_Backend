@@ -31,4 +31,12 @@ public interface IProductRepository : IRepositoryBase<Product>
     /// Searches products by name (partial match).
     /// </summary>
     Task<IReadOnlyList<Product>> SearchByNameAsync(string searchTerm, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches products by name or barcode (partial match, case-insensitive).
+    /// Returns up to the specified maximum number of results.
+    /// </summary>
+    /// <param name="searchTerm">Search term to match against name or barcode</param>
+    /// <param name="maxResults">Maximum number of results to return (default: 20)</param>
+    Task<IReadOnlyList<Product>> SearchAsync(string searchTerm, int maxResults = 20, CancellationToken cancellationToken = default);
 }

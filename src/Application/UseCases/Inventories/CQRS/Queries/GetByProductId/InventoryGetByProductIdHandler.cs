@@ -25,7 +25,7 @@ public class InventoryGetByProductIdHandler : IRequestHandler<InventoryGetByProd
             cancellationToken
         );
 
-        if (inventory is null || inventory.Quantity == 0)
+        if (inventory is null || inventory.Stock == 0)
         {
             return Result.Error(ErrorResult.NotFound, detail: InventoryMessages.NotFound.WithProductId(request.ProductId));
         }

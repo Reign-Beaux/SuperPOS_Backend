@@ -18,12 +18,12 @@ public class Inventory : BaseEntity, IAggregateRoot
 
     // Primitive properties for EF Core persistence
     public Guid ProductId { get; set; }
-    public int Quantity { get; set; }
+    public int Stock { get; set; }
 
     // Value Object property for domain logic
     public Quantity QuantityValue
     {
-        get => _quantity ??= ValueObjects.Quantity.Create(Quantity);
+        get => _quantity ??= ValueObjects.Quantity.Create(Stock);
         private set => _quantity = value;
     }
 
@@ -41,7 +41,7 @@ public class Inventory : BaseEntity, IAggregateRoot
         return new Inventory
         {
             ProductId = productId,
-            Quantity = initialQuantity.Value,
+            Stock = initialQuantity.Value,
             _quantity = initialQuantity
         };
     }
@@ -55,7 +55,7 @@ public class Inventory : BaseEntity, IAggregateRoot
             throw new InvalidQuantityException("Cannot add zero or negative stock", quantity.Value);
 
         var newQuantity = QuantityValue.Add(quantity);
-        Quantity = newQuantity.Value;
+        Stock = newQuantity.Value;
         _quantity = newQuantity;
         UpdatedAt = DateTime.UtcNow;
 
@@ -64,7 +64,7 @@ public class Inventory : BaseEntity, IAggregateRoot
             Id,
             ProductId,
             quantity.Value,
-            Quantity));
+            Stock));
     }
 
     /// <summary>
@@ -85,10 +85,10 @@ public class Inventory : BaseEntity, IAggregateRoot
             throw new InvalidQuantityException("Cannot remove zero or negative stock", quantity.Value);
 
         if (!HasSufficientStock(quantity))
-            throw new InsufficientStockException(Quantity, quantity.Value);
+            throw new InsufficientStockException(Stock, quantity.Value);
 
         var newQuantity = QuantityValue.Subtract(quantity);
-        Quantity = newQuantity.Value;
+        Stock = newQuantity.Value;
         _quantity = newQuantity;
         UpdatedAt = DateTime.UtcNow;
 
@@ -97,7 +97,7 @@ public class Inventory : BaseEntity, IAggregateRoot
             Id,
             ProductId,
             quantity.Value,
-            Quantity));
+            Stock));
 
         // Check for low stock and raise event if needed
         const int lowStockThreshold = 10;
@@ -106,7 +106,7 @@ public class Inventory : BaseEntity, IAggregateRoot
             AddDomainEvent(new LowStockEvent(
                 Id,
                 ProductId,
-                Quantity,
+                Stock,
                 lowStockThreshold));
         }
     }
@@ -128,7 +128,7 @@ public class Inventory : BaseEntity, IAggregateRoot
         if (quantity.Value < 0)
             throw new InvalidQuantityException("Stock quantity cannot be negative", quantity.Value);
 
-        Quantity = quantity.Value;
+        Stock = quantity.Value;
         _quantity = quantity;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -149,18 +149,18 @@ public class Inventory : BaseEntity, IAggregateRoot
     /// <summary>
     /// Checks if there is sufficient stock by integer amount.
     /// </summary>
-    public bool HasSufficientStock(int required) => Quantity >= required;
+    public bool HasSufficientStock(int required) => Stock >= required;
 
     /// <summary>
     /// Checks if the inventory is completely out of stock.
     /// </summary>
-    public bool IsOutOfStock() => Quantity == 0;
+    public bool IsOutOfStock() => Stock == 0;
 
     /// <summary>
     /// Checks if the inventory is running low on stock.
     /// Default threshold is 10 units.
     /// </summary>
-    public bool IsLowStock(int threshold = 10) => Quantity > 0 && Quantity <= threshold;
+    public bool IsLowStock(int threshold = 10) => Stock > 0 && Stock <= threshold;
 
     /// <summary>
     /// Gets the available quantity as a Quantity value object.
@@ -175,6 +175,6 @@ public class Inventory : BaseEntity, IAggregateRoot
         if (maxCapacity <= 0)
             throw new InvalidQuantityException("Max capacity must be positive", maxCapacity);
 
-        return (decimal)Quantity / maxCapacity * 100;
+        return (decimal)Stock / maxCapacity * 100;
     }
 }

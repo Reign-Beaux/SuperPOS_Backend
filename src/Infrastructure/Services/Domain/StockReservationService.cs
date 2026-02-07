@@ -41,7 +41,7 @@ public class StockReservationService : IStockReservationService
                 // Check if sufficient stock is available
                 if (!inventory.HasSufficientStock(quantity))
                 {
-                    return (false, $"Insufficient stock for product {productId}. Available: {inventory.Quantity}, Required: {quantity.Value}");
+                    return (false, $"Insufficient stock for product {productId}. Available: {inventory.Stock}, Required: {quantity.Value}");
                 }
 
                 // Reserve stock by removing it from inventory

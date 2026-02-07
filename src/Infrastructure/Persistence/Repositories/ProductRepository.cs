@@ -62,4 +62,20 @@ public sealed class ProductRepository : RepositoryBase<Product>, IProductReposit
             .OrderBy(p => p.Name)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Product>> SearchAsync(string searchTerm, int maxResults = 20, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return Array.Empty<Product>();
+
+        var normalizedTerm = searchTerm.ToLower();
+
+        return await _dbSet
+            .Where(p => p.DeletedAt == null &&
+                       (p.Name.ToLower().Contains(normalizedTerm) ||
+                        (p.Barcode != null && p.Barcode.ToLower().Contains(normalizedTerm))))
+            .OrderBy(p => p.Name)
+            .Take(maxResults)
+            .ToListAsync(cancellationToken);
+    }
 }

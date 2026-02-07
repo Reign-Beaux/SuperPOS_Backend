@@ -21,14 +21,25 @@ public class InventoryGetAllHandler : IRequestHandler<InventoryGetAllQuery, Oper
     public async Task<OperationResult<List<InventoryDTO>>> Handle(InventoryGetAllQuery request, CancellationToken cancellationToken)
     {
         var inventories = await _unitOfWork.Repository<Inventory>().GetAllAsync(cancellationToken);
-
-        // Cargar los productos manualmente
         var inventoryList = inventories.ToList();
+
+        // Optimización: Obtener todos los productos de una vez en lugar de N+1 queries
+        var productIds = inventoryList.Select(i => i.ProductId).Distinct().ToList();
+        var products = await _unitOfWork.Repository<Product>().QueryAsync(
+            predicate: p => productIds.Contains(p.Id),
+            cancellationToken: cancellationToken
+        );
+
+        // Crear diccionario para búsqueda rápida
+        var productDictionary = products.ToDictionary(p => p.Id);
+
+        // Asignar productos a inventarios
         foreach (var inventory in inventoryList)
         {
-            var currentProduct = await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken);
-            if (currentProduct is not null)
-                inventory.Product = currentProduct;
+            if (productDictionary.TryGetValue(inventory.ProductId, out var product))
+            {
+                inventory.Product = product;
+            }
         }
 
         var dtos = _mapper.Map<List<InventoryDTO>>(inventoryList);

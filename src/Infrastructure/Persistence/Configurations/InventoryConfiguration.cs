@@ -12,7 +12,7 @@ public sealed class InventoryConfiguration : IEntityTypeConfiguration<Inventory>
         builder.Property(i => i.ProductId)
           .IsRequired();
 
-        builder.Property(i => i.Quantity)
+        builder.Property(i => i.Stock)
           .IsRequired();
 
         builder.HasIndex(i => i.ProductId)

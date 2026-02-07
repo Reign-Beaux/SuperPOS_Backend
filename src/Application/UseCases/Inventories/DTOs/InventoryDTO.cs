@@ -4,7 +4,10 @@ public record InventoryDTO(
     Guid Id,
     Guid ProductId,
     string ProductName,
-    int Quantity,
+    string? ProductDescription,
+    string? Barcode,
+    decimal UnitPrice,
+    int Stock,
     DateTime CreatedAt,
     DateTime UpdatedAt
 );
