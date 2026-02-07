@@ -4,6 +4,7 @@ using Application.UseCases.Customers.CQRS.Commands.Update;
 using Application.UseCases.Customers.CQRS.Commands.Delete;
 using Application.UseCases.Customers.CQRS.Queries.GetById;
 using Application.UseCases.Customers.CQRS.Queries.GetAll;
+using Application.UseCases.Customers.CQRS.Queries.Search;
 
 namespace Web.API.Controllers;
 
@@ -29,6 +30,13 @@ public class CustomerController(IMediator mediator) : BaseController
     public async Task<IActionResult> GetAll()
     {
         var result = await mediator.Send(new CustomerGetAllQuery());
+        return HandleResult(result);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string term)
+    {
+        var result = await mediator.Send(new CustomerSearchQuery(term));
         return HandleResult(result);
     }
 

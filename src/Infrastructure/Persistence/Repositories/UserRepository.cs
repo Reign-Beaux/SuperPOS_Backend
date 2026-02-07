@@ -74,4 +74,39 @@ public sealed class UserRepository : RepositoryBase<User>, IUserRepository
 
         return user;
     }
+
+    public async Task<IReadOnlyList<User>> SearchByNameAsync(string searchTerm, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return await GetAllAsync(cancellationToken);
+
+        var normalizedTerm = searchTerm.ToLower();
+
+        var users = await _dbSet
+            .Where(u => u.DeletedAt == null &&
+                       (u.Name.ToLower().Contains(normalizedTerm) ||
+                        u.FirstLastname.ToLower().Contains(normalizedTerm) ||
+                        (u.SecondLastname != null && u.SecondLastname.ToLower().Contains(normalizedTerm))))
+            .OrderBy(u => u.Name)
+            .ThenBy(u => u.FirstLastname)
+            .ToListAsync(cancellationToken);
+
+        // Load roles for all users
+        var roleIds = users.Select(u => u.RoleId).Distinct().ToList();
+        var roles = await _context.Set<Role>()
+            .Where(r => roleIds.Contains(r.Id) && r.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        var roleDictionary = roles.ToDictionary(r => r.Id);
+
+        foreach (var user in users)
+        {
+            if (roleDictionary.TryGetValue(user.RoleId, out var role))
+            {
+                user.Role = role;
+            }
+        }
+
+        return users;
+    }
 }

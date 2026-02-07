@@ -29,4 +29,9 @@ public interface IUserRepository : IRepositoryBase<User>
     /// Gets a user by ID with their associated role loaded.
     /// </summary>
     Task<User?> GetByIdWithRoleAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches users by name (partial match) with their associated roles loaded.
+    /// </summary>
+    Task<IReadOnlyList<User>> SearchByNameAsync(string searchTerm, CancellationToken cancellationToken = default);
 }
