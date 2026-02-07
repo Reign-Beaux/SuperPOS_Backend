@@ -20,29 +20,44 @@ public class InventoryGetAllHandler : IRequestHandler<InventoryGetAllQuery, Oper
 
     public async Task<OperationResult<List<InventoryDTO>>> Handle(InventoryGetAllQuery request, CancellationToken cancellationToken)
     {
+        // Obtener TODOS los productos (la base del inventario)
+        var products = await _unitOfWork.Repository<Product>().GetAllAsync(cancellationToken);
+        var productList = products.ToList();
+
+        // Obtener todos los registros de inventario existentes
         var inventories = await _unitOfWork.Repository<Inventory>().GetAllAsync(cancellationToken);
-        var inventoryList = inventories.ToList();
+        var inventoryDictionary = inventories.ToDictionary(i => i.ProductId);
 
-        // Optimización: Obtener todos los productos de una vez en lugar de N+1 queries
-        var productIds = inventoryList.Select(i => i.ProductId).Distinct().ToList();
-        var products = await _unitOfWork.Repository<Product>().QueryAsync(
-            predicate: p => productIds.Contains(p.Id),
-            cancellationToken: cancellationToken
-        );
+        // Crear DTOs para todos los productos
+        var dtos = new List<InventoryDTO>();
 
-        // Crear diccionario para búsqueda rápida
-        var productDictionary = products.ToDictionary(p => p.Id);
-
-        // Asignar productos a inventarios
-        foreach (var inventory in inventoryList)
+        foreach (var product in productList)
         {
-            if (productDictionary.TryGetValue(inventory.ProductId, out var product))
+            // Buscar si existe un registro de inventario para este producto
+            if (inventoryDictionary.TryGetValue(product.Id, out var inventory))
             {
+                // Producto con inventario existente
                 inventory.Product = product;
+                var dto = _mapper.Map<InventoryDTO>(inventory);
+                dtos.Add(dto);
+            }
+            else
+            {
+                // Producto sin inventario - crear DTO con stock = 0
+                var dto = new InventoryDTO(
+                    Id: Guid.Empty, // No hay registro de inventario
+                    ProductId: product.Id,
+                    ProductName: product.Name,
+                    ProductDescription: product.Description,
+                    Barcode: product.Barcode,
+                    Stock: 0, // Stock en cero
+                    CreatedAt: product.CreatedAt,
+                    UpdatedAt: product.UpdatedAt ?? product.CreatedAt
+                );
+                dtos.Add(dto);
             }
         }
 
-        var dtos = _mapper.Map<List<InventoryDTO>>(inventoryList);
         return Result.Success(dtos);
     }
 }

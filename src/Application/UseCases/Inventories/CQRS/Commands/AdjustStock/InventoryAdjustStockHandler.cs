@@ -44,7 +44,7 @@ public class InventoryAdjustStockHandler : IRequestHandler<InventoryAdjustStockC
                 }
                 else
                 {
-                    return Result.Error(ErrorResult.BadRequest, detail: InventoryMessages.AdjustStock.InvalidQuantity);
+                    return Result.Error(ErrorResult.BadRequest, detail: "Cannot remove stock from a product with no inventory record");
                 }
             }
             else
@@ -58,6 +58,10 @@ public class InventoryAdjustStockHandler : IRequestHandler<InventoryAdjustStockC
 
                     case InventoryOperation.Set:
                         inventory.SetStock(quantity);
+                        break;
+
+                    case InventoryOperation.Remove:
+                        inventory.RemoveStock(quantity);
                         break;
 
                     default:
@@ -76,6 +80,10 @@ public class InventoryAdjustStockHandler : IRequestHandler<InventoryAdjustStockC
             return Result.Success(dto);
         }
         catch (Domain.Exceptions.InvalidQuantityException ex)
+        {
+            return Result.Error(ErrorResult.BadRequest, detail: ex.Message);
+        }
+        catch (Domain.Exceptions.InsufficientStockException ex)
         {
             return Result.Error(ErrorResult.BadRequest, detail: ex.Message);
         }

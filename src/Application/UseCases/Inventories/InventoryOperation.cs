@@ -8,10 +8,15 @@ public enum InventoryOperation
     /// <summary>
     /// Add quantity to existing stock.
     /// </summary>
-    Add,
+    Add = 0,
 
     /// <summary>
     /// Set stock to a specific quantity (absolute value).
     /// </summary>
-    Set
+    Set = 1,
+
+    /// <summary>
+    /// Remove quantity from existing stock.
+    /// </summary>
+    Remove = 2
 }
