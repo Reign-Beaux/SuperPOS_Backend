@@ -21,10 +21,11 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
           .HasPrecision(18, 2);
 
         builder.HasIndex(a => a.Name)
-          .IsUnique();
+          .IsUnique()
+          .HasFilter("[DeletedAt] IS NULL");
         builder.HasIndex(a => a.Barcode)
           .IsUnique()
-          .HasFilter("[Barcode] IS NOT NULL");
+          .HasFilter("[Barcode] IS NOT NULL AND [DeletedAt] IS NULL");
 
         // Relationships
         builder.HasMany(a => a.Inventories)

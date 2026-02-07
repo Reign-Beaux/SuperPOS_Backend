@@ -35,7 +35,8 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
           .IsRequired();
 
         builder.HasIndex(u => u.Email)
-          .IsUnique();
+          .IsUnique()
+          .HasFilter("[DeletedAt] IS NULL");
 
         builder.HasIndex(u => u.RoleId);
 

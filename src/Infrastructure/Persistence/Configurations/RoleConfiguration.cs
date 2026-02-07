@@ -17,7 +17,8 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
           .HasMaxLength(500);
 
         builder.HasIndex(r => r.Name)
-          .IsUnique();
+          .IsUnique()
+          .HasFilter("[DeletedAt] IS NULL");
 
         // Note: Role-User relationship is configured in UserConfiguration
     }

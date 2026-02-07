@@ -30,7 +30,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
 
         builder.HasIndex(c => c.Email)
           .IsUnique()
-          .HasFilter("[Email] IS NOT NULL");
+          .HasFilter("[Email] IS NOT NULL AND [DeletedAt] IS NULL");
 
         // Relationships
         builder.HasMany(c => c.Sales)
