@@ -33,7 +33,7 @@ public abstract class BaseController : ControllerBase
             StatusResult.NotFound
                 => NotFound(result.Error!.Detail),
 
-            _ => StatusCode((int)result.Status, result.Error!.Detail ?? "Unexpected error")
+            _ => StatusCode((int)result.Status, result.Error?.Detail ?? "Unexpected error")
         };
     }
 }

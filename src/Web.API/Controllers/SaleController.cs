@@ -20,7 +20,7 @@ public class SaleController : BaseController
     public async Task<IActionResult> Create([FromBody] CreateSaleCommand command)
     {
         var result = await _mediator.Send(command);
-        return HandleResult(result);
+        return HandleResult(result, nameof(GetById));
     }
 
     [HttpGet("{id:guid}")]
