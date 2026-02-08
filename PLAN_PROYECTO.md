@@ -57,6 +57,32 @@ Desarrollar un sistema completo de Punto de Venta (POS) con funcionalidades avan
 
 ---
 
+## 🎯 DECISIONES DE ALCANCE - Módulo de Ventas
+
+Esta sección documenta las decisiones tomadas sobre qué funcionalidades se implementarán en el módulo de ventas.
+
+### ✅ **APROBADO PARA IMPLEMENTACIÓN**
+
+1. **Cancelar venta** - Con reintegro automático de inventario (rollback)
+2. **Notificar stock bajo** - Handlers para LowStockEvent que envían correo electrónico
+3. **Generar ticket de venta PDF** - Documento de venta para el cliente
+4. **Devoluciones y cambios** - Entidad Return con reintegro de inventario
+
+### ⏸️ **PENDIENTE DE DECISIÓN**
+
+1. **InventoryMovement** - Historial detallado de todos los movimientos de inventario
+2. **Descuentos y promociones** - Sistema de descuentos automáticos y reglas promocionales
+
+### ❌ **EXCLUIDO DEL ALCANCE**
+
+1. **Ventas a crédito** - NO se implementará PaymentStatus (Paid/Pending/Partial)
+2. **Abonos parciales** - NO se implementará entidad Payment para cuentas por cobrar
+3. **Múltiples métodos de pago** - NO se implementará pago combinado (efectivo + tarjeta)
+
+**Justificación:** El sistema se enfoca en ventas al contado. Las ventas se consideran pagadas al momento de crearse.
+
+---
+
 ## 🗓️ FASES DEL PROYECTO
 
 ---
@@ -112,7 +138,7 @@ Esta fase ya está completada. Tu proyecto tiene:
 ### 3.1 Módulo de Ventas (CRÍTICO)
 **Tiempo estimado: No proporcionaré estimaciones, pero esta es una prioridad alta**
 
-#### Tareas
+#### Tareas Completadas
 - [x] Implementar `CreateSaleHandler` con las siguientes validaciones:
   - [x] Verificar que el cliente existe (vía `ISaleValidationService`)
   - [x] Verificar que el usuario existe (vía `ISaleValidationService`)
@@ -125,11 +151,21 @@ Esta fase ya está completada. Tu proyecto tiene:
     1. `ValidateAndReserveStockAsync()` - Valida y reserva
     2. `CommitReservationAsync()` - Confirma cambios
     3. `RollbackReservationAsync()` - Revierte si falla
-- [ ] Crear entidad `InventoryMovement` por cada cambio de inventario
 - [x] Domain events para stock: `StockAddedEvent`, `StockDecrementedEvent`, `LowStockEvent`
-- [ ] Implementar handlers para eventos de stock bajo
-- [ ] Implementar cancelación de ventas (con reintegro de inventario)
+
+#### Tareas Pendientes (Próxima Implementación)
+- [ ] **Implementar cancelación de ventas** (con reintegro de inventario) - ✅ APROBADO
+- [ ] **Implementar handlers para eventos de stock bajo** (envío de correo) - ✅ APROBADO
+- [ ] **Generar ticket de venta PDF** - ✅ APROBADO
+- [ ] **Implementar devoluciones y cambios** (Return entity + reintegro) - ✅ APROBADO
+- [ ] Crear entidad `InventoryMovement` por cada cambio de inventario - ⏸️ POR DECIDIR
+- [ ] Implementar descuentos y promociones (Discount, DiscountRule) - ⏸️ POR DECIDIR
 - [ ] Crear `SaleSpecification` para consultas complejas de ventas (infraestructura existe)
+
+#### Tareas Excluidas del Alcance
+- [x] ~~Ventas a crédito (PaymentStatus: Paid/Pending/Partial)~~ - ❌ NO SE IMPLEMENTARÁ
+- [x] ~~Abonos parciales (Payment entity para cuentas por cobrar)~~ - ❌ NO SE IMPLEMENTARÁ
+- [x] ~~Múltiples métodos de pago en una venta~~ - ❌ NO SE IMPLEMENTARÁ
 
 #### Comandos y Queries necesarios
 ```
@@ -287,7 +323,7 @@ public async Task<IActionResult> DeleteUser(Guid id) { }
 - [ ] Crear `IPdfService` interface en Application/Interfaces/Services
 - [ ] Implementar `PdfService` en Infrastructure/Services
 
-### 5.2 Ticket de Venta
+### 5.2 Ticket de Venta - ✅ PRIORIDAD ALTA
 #### Tareas
 - [ ] Crear `GenerateSaleTicketCommand(Guid SaleId)`
 - [ ] Implementar `GenerateSaleTicketHandler`:
@@ -297,11 +333,13 @@ public async Task<IActionResult> DeleteUser(Guid id) { }
 - [ ] Diseñar layout del ticket:
   - Logo/nombre del negocio
   - Fecha y hora
-  - Número de ticket
+  - Número de ticket (usar Sale.Id)
   - Datos del cliente
   - Tabla de productos (producto, cantidad, precio, subtotal)
-  - Subtotal, impuestos, descuentos, total
-  - Método de pago
+  - Total de la venta
+  - ~~Impuestos~~ - NO SE IMPLEMENTA
+  - ~~Descuentos~~ - POR DECIDIR
+  - ~~Método de pago~~ - NO SE IMPLEMENTA
   - Mensaje de agradecimiento
 - [ ] Crear endpoint `GET /api/sales/{id}/ticket` que retorne el PDF
 - [ ] Retornar PDF con header correcto:
@@ -724,25 +762,23 @@ public async Task<IActionResult> DeleteUser(Guid id) { }
 
 ---
 
-### 2. **Múltiples Métodos de Pago en una Venta**
+### 2. **Múltiples Métodos de Pago en una Venta** - ❌ NO SE IMPLEMENTARÁ
 **¿Para qué?** Un cliente puede pagar parte en efectivo y parte con tarjeta.
 
-**Implementación:**
-- Entidad `PaymentMethod` (efectivo, tarjeta, transferencia)
-- Entidad `SalePayment` (relaciona Sale con PaymentMethod y monto)
-- Una venta puede tener múltiples `SalePayment`
-- Validar que la suma de pagos = total de venta
+**Estado:** Excluido del alcance del proyecto por decisión del usuario.
 
 ---
 
-### 3. **Descuentos y Promociones**
+### 3. **Descuentos y Promociones** - ⏸️ POR DECIDIR
 **¿Para qué?** Aplicar descuentos automáticos (2x1, descuento por cantidad, cupones).
 
-**Implementación:**
+**Implementación (si se decide implementar):**
 - Entidad `Discount` (tipo, valor, fecha inicio/fin, condiciones)
 - Entidad `DiscountRule` (reglas de aplicación: "compra 2 lleva 3")
 - Aplicar descuentos en el handler de `CreateSale`
 - Motor de reglas para evaluar si aplica descuento
+
+**Estado:** Pendiente de decisión final.
 
 ---
 
@@ -768,14 +804,10 @@ public async Task<IActionResult> DeleteUser(Guid id) { }
 
 ---
 
-### 6. **Cuentas por Cobrar (Ventas a Crédito)**
+### 6. **Cuentas por Cobrar (Ventas a Crédito)** - ❌ NO SE IMPLEMENTARÁ
 **¿Para qué?** Permitir ventas a crédito y llevar control de pagos pendientes.
 
-**Implementación:**
-- Campo `PaymentStatus` en Sale (Paid, Pending, Partial)
-- Entidad `Payment` (abonos parciales a una venta)
-- Query para obtener cuentas por cobrar
-- Alertas de pagos vencidos
+**Estado:** Excluido del alcance del proyecto por decisión del usuario. Todas las ventas se considerarán pagadas al momento de crearse.
 
 ---
 
@@ -888,18 +920,21 @@ public async Task<IActionResult> DeleteUser(Guid id) { }
 ### Priorización Sugerida
 
 #### **MUST HAVE (Imprescindible para MVP)**
-1. ✅ Autenticación y autorización (FASE 4)
-2. ✅ Lógica de ventas completa con descuento de inventario (FASE 3)
-3. ✅ Generación de ticket de venta PDF (FASE 5.2)
-4. ✅ Dashboard básico con métricas (FASE 7)
-5. ✅ Reportes básicos de ventas (FASE 6)
+1. ✅ Lógica de ventas completa con descuento de inventario (FASE 3) - COMPLETADO
+2. ✅ Corte de caja (crear y consultar) - COMPLETADO
+3. ⏳ Generación de ticket de venta PDF (FASE 5.2) - PRIORIDAD ALTA
+4. ⏳ Cancelación de ventas con reintegro de inventario - PRIORIDAD ALTA
+5. ⏳ Devoluciones y cambios - PRIORIDAD ALTA
+6. ⏳ Notificaciones de inventario bajo por email (FASE 8) - PRIORIDAD ALTA
+7. Autenticación y autorización (FASE 4)
+8. Dashboard básico con métricas (FASE 7)
 
 #### **SHOULD HAVE (Importante, pero puede esperar)**
-6. Notificaciones de inventario bajo por email (FASE 8)
-7. Recuperación de contraseña (FASE 9)
-8. Corte de caja PDF (FASE 5.3)
-9. Exportación a CSV (FASE 6.1)
-10. WebSockets para chat (FASE 10)
+9. Reportes básicos de ventas con filtros (FASE 6)
+10. Corte de caja PDF (FASE 5.3)
+11. Exportación a CSV (FASE 6.1)
+12. Recuperación de contraseña (FASE 9)
+13. WebSockets para chat (FASE 10)
 
 #### **NICE TO HAVE (Extras para aprender)**
 11. Múltiples métodos de pago
@@ -990,8 +1025,12 @@ Marca cada tarea a medida que la completes:
 - [x] Validación de stock (dos fases: reserve → commit/rollback)
 - [x] Domain Services (uniqueness checkers, validation services)
 - [x] Búsqueda por nombre (Products, Customers, Users)
-- [ ] Cancelación de ventas
-- [ ] Historial de movimientos de inventario (eventos existen, falta entidad)
+- [x] Corte de caja (crear y consultar)
+- [ ] **Cancelación de ventas** (con reintegro de inventario) - ✅ APROBADO
+- [ ] **Devoluciones y cambios** (Return entity + reintegro) - ✅ APROBADO
+- [ ] Historial de movimientos de inventario (eventos existen, falta entidad) - ⏸️ POR DECIDIR
+- [x] ~~Ventas a crédito~~ - ❌ NO SE IMPLEMENTARÁ
+- [x] ~~Abonos parciales~~ - ❌ NO SE IMPLEMENTARÁ
 
 ### Fase 4: Auth
 - [ ] JWT con Access Token
@@ -1000,8 +1039,8 @@ Marca cada tarea a medida que la completes:
 - [ ] Autorización basada en roles
 
 ### Fase 5: PDFs
-- [ ] Ticket de venta
-- [ ] Corte de caja
+- [ ] **Ticket de venta** - ✅ PRIORIDAD ALTA
+- [ ] Corte de caja PDF
 - [ ] Reportes de ventas
 
 ### Fase 6: Reportes
@@ -1016,8 +1055,8 @@ Marca cada tarea a medida que la completes:
 
 ### Fase 8: Emails
 - [ ] Configuración de email service
-- [ ] Notificación de inventario bajo
-- [ ] Background jobs con Hangfire
+- [ ] **Notificación de inventario bajo** - ✅ PRIORIDAD ALTA
+- [ ] Background jobs con Hangfire (opcional para notificaciones automáticas)
 
 ### Fase 9: Recuperación de Contraseña
 - [ ] Flujo completo por email
