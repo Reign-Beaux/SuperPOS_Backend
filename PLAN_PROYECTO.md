@@ -1,5 +1,20 @@
 # 📋 Plan de Trabajo - SuperPOS Backend
 
+## ⚠️ INSTRUCCIONES PARA MANTENER ESTE DOCUMENTO
+
+**IMPORTANTE:** Este documento contiene las decisiones e instrucciones del proyecto.
+
+**Reglas para actualizaciones:**
+1. ❌ **NO cambiar instrucciones existentes** a menos que se indique explícitamente
+2. ✅ **SÍ agregar detalles** que hayan surgido y se hayan olvidado mencionar
+3. ✅ **SÍ actualizar el estado** de tareas (pendiente → en progreso → completado)
+4. ✅ **SÍ corregir errores técnicos** evidentes (nombres incorrectos, typos, etc.)
+5. ❌ **NO asumir cambios de alcance** sin confirmación explícita
+
+Si algo parece contradictorio o necesita cambio, **preguntar primero** antes de modificar.
+
+---
+
 ## 🎯 Objetivo del Proyecto
 Desarrollar un sistema completo de Punto de Venta (POS) con funcionalidades avanzadas para aprender tecnologías modernas y mejores prácticas de desarrollo.
 
@@ -9,24 +24,31 @@ Desarrollar un sistema completo de Punto de Venta (POS) con funcionalidades avan
 
 ### ✅ Completado
 - ✓ Clean Architecture implementada (4 capas: Domain, Application, Infrastructure, Web.API)
-- ✓ Domain-Driven Design (DDD) con entidades y value objects
-- ✓ CQRS con mediador personalizado
+- ✓ Domain-Driven Design (DDD) con entidades, value objects y domain events
+- ✓ CQRS con mediador personalizado (NO MediatR)
 - ✓ Repository Pattern + Unit of Work
 - ✓ Entidades principales: User, Role, Customer, Product, Inventory, Sale, SaleDetail
-- ✓ CRUDs básicos para la mayoría de entidades
+- ✓ CRUDs completos: Users, Roles, Customers, Products
+- ✓ CRUDs parciales: Sales (solo Create y Read), Inventory (solo Adjust y Read)
 - ✓ Mapster para mapeo de objetos
-- ✓ FluentValidation para validaciones
 - ✓ EF Core 10 con SQL Server
-- ✓ Soft deletes implementados
+- ✓ Soft deletes implementados en todas las entidades
+- ✓ Value Objects: Money, Email, PersonName, PhoneNumber, Barcode, Quantity
+- ✓ Domain Events: ProductCreated, ProductPriceChanged, SaleCreated, Stock events
+- ✓ Domain Services: Uniqueness checkers, SaleValidationService, StockReservationService
+- ✓ Reserva de inventario de dos fases (ValidateAndReserve → Commit/Rollback)
+- ✓ Búsqueda por nombre: Products, Customers, Users
+- ✓ Validaciones en dominio y handlers (NO se usa FluentValidation)
+- ✓ Result Pattern para manejo de errores sin excepciones
 
 ### 🔄 En Progreso / Parcial
-- ⚠ Lógica de negocio de ventas (falta descuento automático de inventario)
-- ⚠ Validaciones de negocio complejas
+- ⚠ Reportes (falta corte de caja, análisis de ventas)
+- ⚠ Cancelación de ventas (solo se puede crear)
 
 ### ❌ Pendiente
 - ❌ Autenticación y autorización (JWT)
 - ❌ Generación de PDFs (tickets, reportes)
-- ❌ Reportes con filtros
+- ❌ Reportes con filtros (corte de caja en progreso)
 - ❌ Envío de correos electrónicos
 - ❌ WebSockets para chat
 - ❌ Dashboard con gráficas
@@ -48,16 +70,18 @@ Desarrollar un sistema completo de Punto de Venta (POS) con funcionalidades avan
 
 ### Tareas
 - [x] Entidad `User` con relación a `Role`
-- [x] Entidad `Customer`
-- [x] Entidad `Product`
-- [x] Entidad `Inventory` con relación a `Product`
-- [x] Entidad `Sale` con relaciones a `Customer` y `User`
-- [x] Entidad `SaleDetail` con relaciones a `Sale` y `Product`
+- [x] Entidad `Customer` con value objects (PersonName, Email, PhoneNumber)
+- [x] Entidad `Product` con value objects (Barcode, Money)
+- [x] Entidad `Inventory` con relación a `Product` y value object Quantity
+- [x] Entidad `Sale` con relaciones a `Customer` y `User` (Aggregate Root)
+- [x] Entidad `SaleDetail` con relaciones a `Sale` y `Product` (parte del agregado Sale)
+- [x] Entidad `Role` (catálogo simple)
 - [ ] **NUEVA**: Entidad `CashRegister` (para cortes de caja)
 - [ ] **NUEVA**: Entidad `InventoryMovement` (historial de movimientos de inventario)
 - [ ] **NUEVA**: Entidad `PasswordResetToken` (para recuperación de contraseña)
 - [ ] **NUEVA**: Entidad `EmailLog` (registro de correos enviados)
 - [ ] **NUEVA**: Entidad `ChatMessage` (para el chat entre usuarios)
+- [ ] **NUEVA**: Entidad `RefreshToken` (para JWT refresh tokens - Fase 4)
 
 ### Entregables
 - Todas las entidades del dominio completas
@@ -89,66 +113,74 @@ Esta fase ya está completada. Tu proyecto tiene:
 **Tiempo estimado: No proporcionaré estimaciones, pero esta es una prioridad alta**
 
 #### Tareas
-- [ ] Implementar `CreateSaleHandler` con las siguientes validaciones:
-  - Verificar que el cliente existe
-  - Verificar que todos los productos existen
-  - Verificar que hay suficiente inventario para cada producto
-  - Calcular totales (subtotal, impuestos, descuentos, total)
-  - Usar transacciones para asegurar atomicidad
-- [ ] Implementar descuento automático de inventario al crear venta:
-  ```csharp
-  // Pseudocódigo
-  foreach (var detail in saleDetails)
-  {
-      var inventory = await GetInventory(detail.ProductId);
-      inventory.Quantity -= detail.Quantity;
-      _unitOfWork.Repository<Inventory>().Update(inventory);
-  }
-  ```
-- [ ] Crear `InventoryMovement` por cada cambio de inventario
-- [ ] Implementar validación de stock mínimo (< 10 unidades)
+- [x] Implementar `CreateSaleHandler` con las siguientes validaciones:
+  - [x] Verificar que el cliente existe (vía `ISaleValidationService`)
+  - [x] Verificar que el usuario existe (vía `ISaleValidationService`)
+  - [x] Verificar que todos los productos existen
+  - [x] Verificar que hay suficiente inventario para cada producto
+  - [x] Calcular totales usando métodos de dominio
+  - [x] Usar transacciones (UnitOfWork con SaveChangesAsync)
+- [x] Implementar descuento automático de inventario al crear venta:
+  - Implementado con **IStockReservationService** (patrón de dos fases):
+    1. `ValidateAndReserveStockAsync()` - Valida y reserva
+    2. `CommitReservationAsync()` - Confirma cambios
+    3. `RollbackReservationAsync()` - Revierte si falla
+- [ ] Crear entidad `InventoryMovement` por cada cambio de inventario
+- [x] Domain events para stock: `StockAddedEvent`, `StockDecrementedEvent`, `LowStockEvent`
+- [ ] Implementar handlers para eventos de stock bajo
 - [ ] Implementar cancelación de ventas (con reintegro de inventario)
-- [ ] Crear `SaleSpecification` para consultas complejas de ventas
+- [ ] Crear `SaleSpecification` para consultas complejas de ventas (infraestructura existe)
 
 #### Comandos y Queries necesarios
 ```
 Commands:
-- CreateSaleCommand ✅ (mejorar)
-- CancelSaleCommand (nuevo)
+- CreateSaleCommand ✅ (completo con stock reservation)
+- CancelSaleCommand ❌ (pendiente)
 
 Queries:
-- SaleGetByIdQuery ✅
-- SaleGetAllQuery ✅
-- SalesGetByDateRangeQuery (nuevo)
-- SalesGetByCustomerQuery (nuevo)
-- SalesGetDailySummaryQuery (nuevo)
+- SaleGetByIdQuery ✅ (con detalles: Customer, User, SaleDetails, Products)
+- SaleGetAllQuery ✅ (con detalles completos)
+- SalesClosingQuery 🔄 (en implementación - corte de caja)
+- SalesGetByDateRangeQuery ✅ (existe en ISaleRepository.GetByDateRangeAsync)
+- SalesGetByCustomerQuery ✅ (existe en ISaleRepository.GetByCustomerIdAsync)
+- SalesGetByUserQuery ✅ (existe en ISaleRepository.GetByUserIdAsync)
+- SalesGetDailySummaryQuery ❌ (pendiente)
 ```
 
 ### 3.2 Módulo de Inventario
 #### Tareas
-- [ ] Implementar `UpdateInventoryCommand` (ajustes manuales)
-- [ ] Implementar `InventoryMovementCreateCommand`
-- [ ] Crear `InventoryGetLowStockQuery` (productos con < 10 unidades)
+- [x] Implementar `InventoryAdjustStockCommand` (ajustes manuales: Add/Set/Remove)
+- [ ] Implementar entidad `InventoryMovement` para historial
+- [x] Métodos en repositorio: `GetByProductIdAsync`, `GetLowStockItemsAsync`, `GetOutOfStockItemsAsync`
+- [ ] Crear `InventoryGetLowStockQuery` que use el método del repositorio
 - [ ] Implementar especificación para inventarios bajos
-- [ ] Crear historial de movimientos de inventario
+- [ ] Crear historial completo de movimientos de inventario
 
 ### 3.3 Módulo de Productos
 #### Tareas
-- [ ] Verificar CRUDs completos
-- [ ] Implementar `ProductGetByCategoryQuery` (si tienes categorías)
-- [ ] Implementar búsqueda de productos por nombre/código
+- [x] CRUDs completos (Create, Read, Update, Delete)
+- [x] Búsqueda de productos por nombre (`ProductSearchQuery`)
+- [x] Búsqueda por código de barras (via `IProductRepository.GetByBarcodeAsync`)
+- [x] Validación de unicidad: nombre y barcode (via `IProductUniquenessChecker`)
+- [ ] Implementar categorías de productos (entidad Category no existe)
+- [ ] Implementar `ProductGetByCategoryQuery`
 
 ### 3.4 Módulo de Clientes
 #### Tareas
-- [ ] Verificar CRUDs completos
+- [x] CRUDs completos (Create, Read, Update, Delete)
+- [x] Búsqueda de clientes por nombre (`CustomerSearchQuery`)
+- [x] Validación de unicidad (via `ICustomerUniquenessChecker`)
 - [ ] Implementar `CustomerGetByPhoneQuery`
-- [ ] Implementar `CustomerGetPurchaseHistoryQuery`
+- [ ] Implementar `CustomerGetPurchaseHistoryQuery` (relación Customer.Sales existe)
 
 ### 3.5 Módulo de Usuarios
 #### Tareas
-- [ ] Implementar hash de contraseñas usando `IEncryptionService`
-- [ ] Verificar que no se pueden crear usuarios duplicados (email único)
-- [ ] Implementar `UserGetByEmailQuery`
+- [x] CRUDs completos (Create, Read, Update, Delete)
+- [x] Búsqueda de usuarios por nombre con rol (`UserSearchQuery`)
+- [x] Hash de contraseñas usando `IEncryptionService` (implementado en Infrastructure)
+- [x] Validación de email único (via `IUserUniquenessChecker`)
+- [x] Relación User → Role (un usuario tiene un rol)
+- [ ] Implementar `UserGetByEmailQuery` (método existe en repositorio, falta query)
 
 ---
 
@@ -944,17 +976,22 @@ Marca cada tarea a medida que la completes:
 
 ### Fase 1: Entidades
 - [x] Entidades base (User, Role, Customer, Product, Inventory, Sale, SaleDetail)
-- [ ] CashRegister
+- [x] Value Objects (Money, Email, PersonName, PhoneNumber, Barcode, Quantity)
+- [x] Domain Events (ProductCreated, SaleCreated, Stock events)
+- [ ] CashRegister (se implementará como reporte, no entidad)
 - [ ] InventoryMovement
 - [ ] PasswordResetToken
 - [ ] EmailLog
 - [ ] ChatMessage
+- [ ] RefreshToken
 
 ### Fase 3: Lógica de Negocio
-- [ ] Ventas con descuento automático de inventario
-- [ ] Validación de stock
+- [x] Ventas con descuento automático de inventario (via IStockReservationService)
+- [x] Validación de stock (dos fases: reserve → commit/rollback)
+- [x] Domain Services (uniqueness checkers, validation services)
+- [x] Búsqueda por nombre (Products, Customers, Users)
 - [ ] Cancelación de ventas
-- [ ] Historial de movimientos de inventario
+- [ ] Historial de movimientos de inventario (eventos existen, falta entidad)
 
 ### Fase 4: Auth
 - [ ] JWT con Access Token

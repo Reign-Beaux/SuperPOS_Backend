@@ -26,6 +26,7 @@ public class UnitOfWork : IUnitOfWork
     private ISaleRepository? _sales;
     private IInventoryRepository? _inventories;
     private IRoleRepository? _roles;
+    private ICashRegisterRepository? _cashRegisters;
 
     public UnitOfWork(SuperPOSDbContext context, IDomainEventDispatcher eventDispatcher)
     {
@@ -40,6 +41,7 @@ public class UnitOfWork : IUnitOfWork
     public ISaleRepository Sales => _sales ??= new SaleRepository(_context);
     public IInventoryRepository Inventories => _inventories ??= new InventoryRepository(_context);
     public IRoleRepository Roles => _roles ??= new RoleRepository(_context);
+    public ICashRegisterRepository CashRegisters => _cashRegisters ??= new CashRegisterRepository(_context);
 
     /// <summary>
     /// Generic repository accessor for aggregate roots that don't need specialized operations.

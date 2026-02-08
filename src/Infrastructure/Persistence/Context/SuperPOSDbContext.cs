@@ -5,6 +5,7 @@ using Domain.Entities.Inventories;
 using Domain.Entities.Roles;
 using Domain.Entities.Sales;
 using Domain.Entities.Users;
+using Domain.Entities.CashRegisters;
 using Domain.ValueObjects;
 
 namespace Infrastructure.Persistence.Context;
@@ -18,6 +19,7 @@ public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : Db
     public DbSet<Role> Roles { get; set; } = null!;
     public DbSet<Sale> Sales { get; set; } = null!;
     public DbSet<SaleDetail> SaleDetails { get; set; } = null!;
+    public DbSet<CashRegister> CashRegisters { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

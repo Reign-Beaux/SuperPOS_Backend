@@ -55,7 +55,6 @@ global using Microsoft.EntityFrameworkCore;
 
 #### Application Layer (`src/Application/GlobalUsings.cs`)
 ```csharp
-global using FluentValidation;
 global using Mapster;
 global using MapsterMapper;
 global using Microsoft.EntityFrameworkCore;
@@ -103,13 +102,6 @@ using Application.UseCases.{Entity}.CQRS.Queries.*;     // Queries
 // Note: Microsoft.AspNetCore.Mvc already global
 ```
 
-**Rules** (Application layer):
-```csharp
-using Application.Interfaces.Persistence.UnitOfWorks;   // IUnitOfWork
-using Domain.Entities.{Entity};                         // Entity classes
-// Note: System.Linq.Expressions already global
-```
-
 **Mappings** (Application layer):
 ```csharp
 using Application.UseCases.{Entity}.DTOs;               // DTOs
@@ -135,9 +127,11 @@ using Domain.Entities.{Entity};                         // Entity classes
    - Factory methods in `Result` class:
      - `Result.Success<T>(T data)` - Returns 200 OK
      - `Result.Success<T>(T data, string message)` - Returns 200 OK with message
-     - `Result.Error<T>(ErrorResult errorType, string? detail = null)` - Returns error (400/404/409 based on ErrorResult)
+     - `Result.Error(ErrorResult errorType, string? detail = null)` - Returns error (returns OperationResult<VoidResult>)
      - `new OperationResult<T>(StatusResult.Created, T data)` - Returns 201 Created
-   - `ErrorResult` enum values:
+   - `StatusResult` enum values:
+     - `Ok`, `NoContent`, `Created`, `Exists`, `Conflict`, `BadRequest`, `NotFound`, `InternalServerError`, `Forbidden`, `ServiceUnavailable`, `GatewayTimeout`
+   - `ErrorResult` enum values (subset of StatusResult for errors):
      - `ErrorResult.BadRequest` → 400 Bad Request
      - `ErrorResult.NotFound` → 404 Not Found
      - `ErrorResult.Conflict` → 409 Conflict
@@ -148,9 +142,9 @@ using Domain.Entities.{Entity};                         // Entity classes
    - Each has a corresponding `Handler` class
 
 4. **Repository + Unit of Work** - `Infrastructure/Persistence/`
-   - Generic `Repository<T>` with soft delete support
+   - Generic `RepositoryBase<T>` with soft delete support
    - `IUnitOfWork` for transaction management
-   - Repository methods available:
+   - Base repository methods available:
      - `GetAllAsync(CancellationToken)` - Get all entities (excludes soft-deleted)
      - `GetByIdAsync(Guid id, CancellationToken)` - Get entity by ID
      - `Add(T entity)` - Add entity (call SaveChangesAsync to persist)
@@ -158,16 +152,25 @@ using Domain.Entities.{Entity};                         // Entity classes
      - `Delete(T entity)` - Soft delete entity (call SaveChangesAsync to persist)
      - `FirstOrDefaultAsync(Expression<Func<T, bool>> predicate, CancellationToken)` - Find first match
      - `QueryAsync(Expression<Func<T, bool>>? predicate, Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy, CancellationToken)` - Query with filters
+     - `AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken)` - Check if any match
+     - `CountAsync(Expression<Func<T, bool>>? predicate, CancellationToken)` - Count entities
      - `GetAllWithSpecAsync(ISpecification<T> spec, CancellationToken)` - Query using specification pattern
-     - `CountAsync(ISpecification<T> spec, CancellationToken)` - Count using specification
-   - Access via: `_unitOfWork.Repository<EntityType>()`
-   - Note: Repository does NOT support eager loading (includes). Load related entities manually or use specifications
+   - **UnitOfWork specific repositories** (preferred over generic):
+     - `_unitOfWork.Products` - IProductRepository (with SearchByNameAsync, ExistsByBarcodeAsync, etc.)
+     - `_unitOfWork.Customers` - ICustomerRepository (with SearchByNameAsync)
+     - `_unitOfWork.Users` - IUserRepository (with SearchByNameAsync)
+     - `_unitOfWork.Sales` - ISaleRepository (with GetByDateRangeAsync, GetByIdWithDetailsAsync, etc.)
+     - `_unitOfWork.Inventories` - IInventoryRepository (with GetByProductIdAsync, GetLowStockItemsAsync)
+     - `_unitOfWork.Roles` - IRoleRepository
+   - Generic access: `_unitOfWork.Repository<EntityType>()`
+   - **Note:** Base repository does NOT support eager loading. However, specific repositories (like ISaleRepository) have custom methods with eager loading (e.g., `GetByIdWithDetailsAsync()`)
 
 5. **Specification Pattern** - `Application/DesignPatterns/Specifications/`
    - `ISpecification<T>` / `BaseSpecification<T>` for complex queries
    - Supports: Criteria, Includes, OrderBy/OrderByDescending, Pagination
    - `SpecificationEvaluator` in Infrastructure applies specifications to IQueryable
    - `BasePaginationQuery` and `PaginationDTO` for paginated responses
+   - **Note:** Infrastructure exists but no actual specifications are currently implemented. Use specific repository methods for now.
 
 ### Database Conventions
 
@@ -179,27 +182,37 @@ using Domain.Entities.{Entity};                         // Entity classes
 
 ## Adding a New Entity
 
-1. **Domain**: Create entity in `src/Domain/Entities/{Entity}/`
+1. **Domain**:
+   - Create entity in `src/Domain/Entities/{Entity}/`
+   - Add domain messages in `{Entity}Messages.cs`
+   - Add repository interface `I{Entity}Repository` in `src/Domain/Repositories/` if custom methods needed
+   - Consider value objects if needed
+   - Add domain events if needed
 2. **Application**:
    - Create folder `src/Application/UseCases/{Entity}/`
    - Add `DTOs/{Entity}DTO.cs`
    - Add `{Entity}Mappings.cs` (Mapster config)
-   - Add `{Entity}Rules.cs` (business validation)
    - Add `CQRS/Commands/` and `CQRS/Queries/` with handlers
+   - **Validation:** Implement in handlers directly or via domain services (no separate validator files)
 3. **Infrastructure**:
    - Add `DbSet<Entity>` to `SuperPOSDbContext`
    - Add EF configuration in `Persistence/Configurations/`
+   - Add repository implementation in `Persistence/Repositories/` if custom methods needed
+   - Add repository property to `IUnitOfWork` and `UnitOfWork`
    - Create migration
-4. **Web.API**: Add controller inheriting `BaseController`
+4. **Web.API**:
+   - Add controller inheriting `BaseController`
+   - **Important:** POST endpoints must call `HandleResult(result, nameof(GetById))` to generate Location header
 
 ## Naming Conventions
 
 - Commands: `Create{Entity}Command`, `{Entity}UpdateCommand`, `{Entity}DeleteCommand`
-- Queries: `{Entity}GetByIdQuery`, `{Entity}GetAllQuery`
+- Queries: `{Entity}GetByIdQuery`, `{Entity}GetAllQuery`, `{Entity}SearchQuery`
 - Handlers: `Create{Entity}Handler`, `{Entity}GetByIdHandler`, etc.
-- DTOs: `{Entity}DTO`
-- Rules: `{Entity}Rules`
-- Messages: `{Entity}Messages` (in Domain)
+- DTOs: `{Entity}DTO` (use record types)
+- Messages: `{Entity}Messages` (in Domain, Spanish language)
+- Repositories: `I{Entity}Repository` (interface in Domain), `{Entity}Repository` (implementation in Infrastructure)
+- Mappings: `{Entity}Mappings` (implements IRegister)
 
 ## Configuration
 
@@ -241,14 +254,19 @@ Each layer registers its services via extension methods:
 
 ### Application Layer - `AddApplication()`
 - Custom Mediator with all handlers from assembly
-- FluentValidation validators
 - Mapster configuration (auto-scanned from assembly)
+- Domain event dispatcher
 - Pipeline behaviors (placeholder for cross-cutting concerns)
 
 ### Infrastructure Layer - `AddInfrastructure()`
 - DbContext (`SuperPOSDbContext`) with SQL Server
-- `IUnitOfWork` and `Repository<T>`
-- `IEncryptionService` (for password hashing, etc.)
+- `IUnitOfWork` and all repository implementations
+- Domain services implementations:
+  - `IProductUniquenessChecker`, `ICustomerUniquenessChecker`, `IUserUniquenessChecker`
+  - `ISaleValidationService` (validates customer/user existence)
+  - `IStockReservationService` (two-phase stock reservation with commit/rollback)
+- `IEncryptionService` (password hashing)
+- `IDomainEventDispatcher`
 - Caching (placeholder for future implementation)
 
 ## Mapster Configuration
@@ -313,15 +331,33 @@ Two-level error handling strategy:
 
 ### Loading Related Entities
 
-Since the Repository does not support eager loading (`.Include()`), you must load related entities manually:
+**Option 1: Use Specific Repository Methods (Recommended)**
+
+Some repositories have custom methods with eager loading:
+
+```csharp
+// Sale repository has methods with eager loading
+var sale = await _unitOfWork.Sales.GetByIdWithDetailsAsync(saleId, cancellationToken);
+// Returns Sale with Customer, User, SaleDetails, and Products loaded
+
+var allSales = await _unitOfWork.Sales.GetAllWithDetailsAsync(cancellationToken);
+// Returns all Sales with complete details
+
+var salesByDate = await _unitOfWork.Sales.GetByDateRangeAsync(startDate, endDate, cancellationToken);
+// Returns Sales filtered by date range
+```
+
+**Option 2: Manual Loading (if specific method doesn't exist)**
+
+Since base repository does not support eager loading, load related entities manually:
 
 ```csharp
 // Get the main entity
-var sale = await _unitOfWork.Repository<Sale>().GetByIdAsync(saleId, cancellationToken);
+var sale = await _unitOfWork.Sales.GetByIdAsync(saleId, cancellationToken);
 
 // Load related entities manually
-sale.Customer = await _unitOfWork.Repository<Customer>().GetByIdAsync(sale.CustomerId, cancellationToken);
-sale.User = await _unitOfWork.Repository<User>().GetByIdAsync(sale.UserId, cancellationToken);
+sale.Customer = await _unitOfWork.Customers.GetByIdAsync(sale.CustomerId, cancellationToken);
+sale.User = await _unitOfWork.Users.GetByIdAsync(sale.UserId, cancellationToken);
 
 // Load collection navigation properties
 var saleDetails = await _unitOfWork.Repository<SaleDetail>().QueryAsync(
@@ -333,22 +369,24 @@ sale.SaleDetails = saleDetails.ToList();
 // Load nested relations
 foreach (var detail in sale.SaleDetails)
 {
-    detail.Product = await _unitOfWork.Repository<Product>().GetByIdAsync(detail.ProductId, cancellationToken);
+    detail.Product = await _unitOfWork.Products.GetByIdAsync(detail.ProductId, cancellationToken);
 }
 ```
 
-**Alternative:** For complex queries with multiple includes, create a Specification.
+**Best Practice:** Check if a specific repository method exists before implementing manual loading.
 
-### Specification Pattern Usage
+### Specification Pattern Usage (Future Feature)
 
-Create specifications for complex queries with eager loading:
+**Note:** Specification pattern infrastructure exists but is not currently used. The pattern is available for future implementation.
+
+If you need to create a specification:
 
 ```csharp
 public class CustomerActiveSpecification : BaseSpecification<Customer>
 {
     public CustomerActiveSpecification() : base(c => c.DeletedAt == null)
     {
-        AddInclude(c => c.Orders);
+        AddInclude(c => c.Sales);
         AddOrderBy(c => c.Name);
     }
 }
@@ -356,17 +394,21 @@ public class CustomerActiveSpecification : BaseSpecification<Customer>
 
 Use in repository:
 ```csharp
-var customers = await _repository.GetAllWithSpecAsync(new CustomerActiveSpecification());
+var customers = await _unitOfWork.Repository<Customer>().GetAllWithSpecAsync(new CustomerActiveSpecification());
 ```
 
-### Pagination
+**Current Approach:** Use specific repository methods or manual filtering instead.
 
-Use `BasePaginationQuery` for paginated endpoints:
+### Pagination (Future Feature)
+
+**Note:** Pagination infrastructure exists (`BasePaginationQuery`, `PaginationDTO<T>`) but is not currently used.
+
+When implementing pagination:
 ```csharp
 public record CustomersGetPagedQuery(int PageNumber, int PageSize) : BasePaginationQuery;
 ```
 
-Return `PaginationDTO<T>` with metadata (page, size, total count).
+Return `PaginationDTO<T>` with metadata (page, size, total count, page count).
 
 ## Services
 
@@ -374,6 +416,60 @@ Return `PaginationDTO<T>` with metadata (page, size, total count).
 Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 
 **Purpose:** Password hashing, data encryption (implementation details in Infrastructure layer)
+
+### Domain Services
+
+**Purpose:** Encapsulate domain logic that doesn't belong to a single entity. All interfaces are in `Domain/Services/`, implementations in `Infrastructure/Services/Domain/`.
+
+- **IProductUniquenessChecker** - Validates product name and barcode uniqueness
+- **ICustomerUniquenessChecker** - Validates customer uniqueness
+- **IUserUniquenessChecker** - Validates user uniqueness (email)
+- **ISaleValidationService** - Validates sales (customer/user existence)
+- **IStockReservationService** - Two-phase stock reservation:
+  - `ValidateAndReserveStockAsync()` - Phase 1: Validate and reserve
+  - `CommitReservationAsync()` - Phase 2: Commit changes
+  - `RollbackReservationAsync()` - Rollback if sale creation fails
+
+## Current Project State
+
+### ✅ Fully Implemented Features
+
+1. **Product Management** - CRUD, search by name/barcode, barcode uniqueness
+2. **Customer Management** - CRUD, search by name
+3. **User Management** - CRUD, search by name with role, password hashing
+4. **Role Management** - CRUD operations
+5. **Inventory Management** - Stock adjustment (Add/Set/Remove operations)
+6. **Sales Management** - Create sales with stock reservation and validation
+7. **Search Functionality** - Products, Customers, and Users
+8. **Soft Delete** - All entities support soft delete with timestamp
+9. **Value Objects** - Money, Email, PersonName, PhoneNumber, Barcode, Quantity
+10. **Domain Events** - Product created/price changed, sale created, stock events
+11. **Two-Phase Stock Reservation** - Prevents overselling
+
+### ⚠️ Implemented Infrastructure, Not Used
+
+- **Pagination** - `BasePaginationQuery` and `PaginationDTO` exist but no queries use them
+- **Specification Pattern** - Infrastructure exists but no actual specifications implemented
+
+### ❌ Not Implemented
+
+1. **Payment Methods** - Sales do not track payment type (cash, card, etc.)
+2. **Reporting** - No analytics or reports (corte de caja, sales reports, etc.)
+3. **Authentication/Authorization** - No JWT or auth middleware
+4. **Sale Updates/Cancellation** - Sales are create-only (no update/delete commands)
+5. **Product Categories** - No product categorization
+6. **Unit Tests** - No test projects exist
+7. **Caching** - Placeholder only
+
+### Important Notes
+
+- **Validation:** No FluentValidation or separate validator files. Validation is done:
+  - In domain entities via value objects and factory methods
+  - In handlers directly
+  - Via domain services (uniqueness checkers, validation services)
+- **Messages:** All user-facing messages are in Spanish
+- **Specific Repositories:** Some entities (Sales, Products, etc.) have specialized repository methods. Always check `IUnitOfWork` properties before using generic `Repository<T>()`
+- **CreatedAtAction:** All POST endpoints that create resources must pass `nameof(GetById)` to `HandleResult()` for proper Location header generation
 
 ## Complete Implementation Examples
 
@@ -413,10 +509,10 @@ public class ProductGetByIdHandler : IRequestHandler<ProductGetByIdQuery, Operat
 
     public async Task<OperationResult<ProductDTO>> Handle(ProductGetByIdQuery request, CancellationToken cancellationToken)
     {
-        var product = await _unitOfWork.Repository<Product>().GetByIdAsync(request.Id, cancellationToken);
+        var product = await _unitOfWork.Products.GetByIdAsync(request.Id, cancellationToken);
 
         if (product == null)
-            return Result.Error<ProductDTO>(ErrorResult.NotFound, detail: ProductMessages.NotFound.WithId(request.Id));
+            return Result.Error(ErrorResult.NotFound, detail: ProductMessages.NotFound.WithId(request.Id));
 
         var dto = _mapper.Map<ProductDTO>(product);
         return Result.Success(dto);
@@ -451,26 +547,11 @@ public class SaleGetByIdHandler : IRequestHandler<SaleGetByIdQuery, OperationRes
 
     public async Task<OperationResult<SaleDTO>> Handle(SaleGetByIdQuery request, CancellationToken cancellationToken)
     {
-        var sale = await _unitOfWork.Repository<Sale>().GetByIdAsync(request.Id, cancellationToken);
+        // Use specific repository method with eager loading instead of manual loading
+        var sale = await _unitOfWork.Sales.GetByIdWithDetailsAsync(request.Id, cancellationToken);
+
         if (sale == null)
-            return Result.Error<SaleDTO>(ErrorResult.NotFound, detail: SaleMessages.NotFound.WithId(request.Id));
-
-        // Load relationships manually
-        sale.Customer = await _unitOfWork.Repository<Customer>().GetByIdAsync(sale.CustomerId, cancellationToken);
-        sale.User = await _unitOfWork.Repository<User>().GetByIdAsync(sale.UserId, cancellationToken);
-
-        // Load collection
-        var saleDetails = await _unitOfWork.Repository<SaleDetail>().QueryAsync(
-            sd => sd.SaleId == sale.Id,
-            cancellationToken: cancellationToken
-        );
-        sale.SaleDetails = saleDetails.ToList();
-
-        // Load nested relationships
-        foreach (var detail in sale.SaleDetails)
-        {
-            detail.Product = await _unitOfWork.Repository<Product>().GetByIdAsync(detail.ProductId, cancellationToken);
-        }
+            return Result.Error(ErrorResult.NotFound, detail: SaleMessages.NotFound.WithId(request.Id));
 
         var dto = _mapper.Map<SaleDTO>(sale);
         return Result.Success(dto);
@@ -503,7 +584,7 @@ public class ProductController : BaseController
     public async Task<IActionResult> Create([FromBody] CreateProductCommand command)
     {
         var result = await _mediator.Send(command);
-        return HandleResult(result);
+        return HandleResult(result, nameof(GetById));
     }
 
     [HttpGet("{id:guid}")]
