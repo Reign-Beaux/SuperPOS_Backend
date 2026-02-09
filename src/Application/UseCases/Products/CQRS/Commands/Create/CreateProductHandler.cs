@@ -57,14 +57,12 @@ public sealed class CreateProductHandler
             ? null
             : Barcode.Create(request.Barcode);
 
-        var unitPrice = Money.Create(request.UnitPrice);
-
         // Use domain factory method
         var product = Product.Create(
             request.Name,
             request.Description,
             barcode,
-            unitPrice);
+            request.UnitPrice);
 
         // Use specific repository
         _unitOfWork.Products.Add(product);

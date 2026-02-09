@@ -10,28 +10,21 @@ namespace Domain.Entities.Products;
 /// </summary>
 public class Product : BaseCatalog, IAggregateRoot
 {
-    // Backing fields for value objects
+    // Backing field for value object
     private Barcode? _barcode;
-    private Money? _unitPrice;
 
     // Parameterless constructor required by EF Core
     public Product() { }
 
-    // Primitive properties for EF Core persistence
+    // Properties for EF Core persistence
     public string? Barcode { get; set; }
     public decimal UnitPrice { get; set; }
 
-    // Value Object properties for domain logic
+    // Value Object property for domain logic
     public Barcode? BarcodeValue
     {
         get => _barcode ??= Barcode is not null ? ValueObjects.Barcode.Create(Barcode) : null;
         private set => _barcode = value;
-    }
-
-    public Money UnitPriceValue
-    {
-        get => _unitPrice ??= Money.Create(UnitPrice);
-        private set => _unitPrice = value;
     }
 
     // Navigation Properties
@@ -41,8 +34,9 @@ public class Product : BaseCatalog, IAggregateRoot
     /// <summary>
     /// Factory method to create a new Product with valid values.
     /// Enforces business rules at creation time.
+    /// Validates that unit price is positive.
     /// </summary>
-    public static Product Create(string name, string description, Barcode? barcode, Money unitPrice)
+    public static Product Create(string name, string description, Barcode? barcode, decimal unitPrice)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new BusinessRuleViolationException("PRODUCT_001", "Product name cannot be empty");
@@ -50,7 +44,7 @@ public class Product : BaseCatalog, IAggregateRoot
         if (name.Length > 200)
             throw new BusinessRuleViolationException("PRODUCT_002", "Product name cannot exceed 200 characters");
 
-        if (unitPrice.Amount <= 0)
+        if (unitPrice <= 0)
             throw new BusinessRuleViolationException("PRODUCT_003", "Product price must be positive");
 
         var product = new Product
@@ -58,9 +52,8 @@ public class Product : BaseCatalog, IAggregateRoot
             Name = name.Trim(),
             Description = description?.Trim() ?? string.Empty,
             Barcode = barcode?.Value,
-            UnitPrice = unitPrice.Amount,
-            _barcode = barcode,
-            _unitPrice = unitPrice
+            UnitPrice = unitPrice,
+            _barcode = barcode
         };
 
         // Raise domain event
@@ -75,23 +68,23 @@ public class Product : BaseCatalog, IAggregateRoot
 
     /// <summary>
     /// Updates the product price while enforcing business rules.
+    /// Validates that new price is positive.
     /// </summary>
-    public void UpdatePrice(Money newPrice)
+    public void UpdatePrice(decimal newPrice)
     {
-        if (newPrice.Amount <= 0)
+        if (newPrice <= 0)
             throw new BusinessRuleViolationException("PRODUCT_003", "Product price must be positive");
 
-        if (newPrice.Amount == UnitPrice)
+        if (newPrice == UnitPrice)
             return; // No change needed
 
         var oldPrice = UnitPrice;
 
-        UnitPrice = newPrice.Amount;
-        _unitPrice = newPrice;
+        UnitPrice = newPrice;
         UpdatedAt = DateTime.UtcNow;
 
         // Raise domain event
-        AddDomainEvent(new ProductPriceChangedEvent(Id, oldPrice, newPrice.Amount));
+        AddDomainEvent(new ProductPriceChangedEvent(Id, oldPrice, newPrice));
     }
 
     /// <summary>
@@ -125,10 +118,16 @@ public class Product : BaseCatalog, IAggregateRoot
 
     /// <summary>
     /// Calculates the total price for a given quantity.
+    /// Validates that result is non-negative.
     /// </summary>
-    public Money CalculateTotal(Quantity quantity)
+    public decimal CalculateTotal(Quantity quantity)
     {
-        return UnitPriceValue.Multiply(quantity.Value);
+        var total = UnitPrice * quantity.Value;
+
+        if (total < 0)
+            throw new BusinessRuleViolationException("PRODUCT_004", "Total cannot be negative");
+
+        return total;
     }
 
     /// <summary>

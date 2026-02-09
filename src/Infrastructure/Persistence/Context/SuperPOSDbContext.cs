@@ -6,6 +6,9 @@ using Domain.Entities.Roles;
 using Domain.Entities.Sales;
 using Domain.Entities.Users;
 using Domain.Entities.CashRegisters;
+using Domain.Entities.Emails;
+using Domain.Entities.Authentication;
+using Domain.Entities.Chat;
 using Domain.ValueObjects;
 
 namespace Infrastructure.Persistence.Context;
@@ -20,12 +23,16 @@ public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : Db
     public DbSet<Sale> Sales { get; set; } = null!;
     public DbSet<SaleDetail> SaleDetails { get; set; } = null!;
     public DbSet<CashRegister> CashRegisters { get; set; } = null!;
+    public DbSet<EmailLog> EmailLogs { get; set; } = null!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
+    public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
+    public DbSet<Conversation> Conversations { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Ignore value objects - they are stored as primitives in entities
         modelBuilder.Ignore<Barcode>();
-        modelBuilder.Ignore<Money>();
         modelBuilder.Ignore<Quantity>();
         modelBuilder.Ignore<Email>();
         modelBuilder.Ignore<PhoneNumber>();

@@ -12,26 +12,16 @@ namespace Domain.Entities.Sales;
 /// </summary>
 public class Sale : BaseEntity, IAggregateRoot
 {
-    // Backing field for value object
-    private Money? _totalAmount;
-
     // Backing field for protected collection
     private readonly List<SaleDetail> _saleDetails = [];
 
     // Parameterless constructor required by EF Core
     public Sale() { }
 
-    // Primitive properties for EF Core persistence
+    // Properties for EF Core persistence
     public Guid CustomerId { get; set; }
     public Guid UserId { get; set; }
     public decimal TotalAmount { get; private set; }  // Private setter to protect invariant
-
-    // Value Object property for domain logic
-    public Money TotalAmountValue
-    {
-        get => _totalAmount ??= Money.Create(TotalAmount);
-        private set => _totalAmount = value;
-    }
 
     // Navigation Properties
     public Customer Customer { get; set; } = null!;
@@ -73,7 +63,7 @@ public class Sale : BaseEntity, IAggregateRoot
     public static Sale Create(
         Guid customerId,
         Guid userId,
-        List<(Guid ProductId, Quantity Quantity, Money UnitPrice)> items)
+        List<(Guid ProductId, Quantity Quantity, decimal UnitPrice)> items)
     {
         if (customerId == Guid.Empty)
             throw new BusinessRuleViolationException("SALE_001", "Customer ID cannot be empty");
@@ -101,7 +91,7 @@ public class Sale : BaseEntity, IAggregateRoot
 
         // Raise domain event
         var saleItems = items.Select(i =>
-            new SaleCreatedEvent.SaleItemInfo(i.ProductId, i.Quantity.Value, i.UnitPrice.Amount))
+            new SaleCreatedEvent.SaleItemInfo(i.ProductId, i.Quantity.Value, i.UnitPrice))
             .ToList();
 
         sale.AddDomainEvent(new SaleCreatedEvent(
@@ -117,9 +107,14 @@ public class Sale : BaseEntity, IAggregateRoot
     /// <summary>
     /// Adds an item to the sale.
     /// Ensures no duplicate products in the same sale.
+    /// Validates that unit price is non-negative.
     /// </summary>
-    private void AddItem(Guid productId, Quantity quantity, Money unitPrice)
+    private void AddItem(Guid productId, Quantity quantity, decimal unitPrice)
     {
+        // Validate unit price
+        if (unitPrice < 0)
+            throw new InvalidValueObjectException(nameof(unitPrice), "Unit price cannot be negative.", unitPrice);
+
         // Check for duplicate product
         if (_saleDetails.Any(d => d.ProductId == productId))
             throw new BusinessRuleViolationException("SALE_004", $"Product {productId} is already in this sale");
@@ -132,12 +127,16 @@ public class Sale : BaseEntity, IAggregateRoot
     /// <summary>
     /// Recalculates the total amount based on all sale details.
     /// Ensures invariant: TotalAmount = sum of all detail totals.
+    /// Validates that total is non-negative.
     /// </summary>
     private void RecalculateTotal()
     {
         var total = _saleDetails.Sum(d => d.Total);
+
+        if (total < 0)
+            throw new BusinessRuleViolationException("SALE_006", "Total amount cannot be negative");
+
         TotalAmount = total;
-        _totalAmount = Money.Create(total);
     }
 
     /// <summary>
@@ -187,7 +186,7 @@ public class Sale : BaseEntity, IAggregateRoot
     /// <summary>
     /// Gets the sale total as a formatted string.
     /// </summary>
-    public string GetFormattedTotal() => TotalAmountValue.ToString();
+    public string GetFormattedTotal() => $"{TotalAmount:F2}";
 
     /// <summary>
     /// Validates that all sale details have valid totals.

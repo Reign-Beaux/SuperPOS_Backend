@@ -73,8 +73,7 @@ public sealed class ProductUpdateHandler
             : Barcode.Create(request.Barcode);
         product.UpdateBarcode(barcode);
 
-        var unitPrice = Money.Create(request.UnitPrice);
-        product.UpdatePrice(unitPrice);
+        product.UpdatePrice(request.UnitPrice);
 
         // Use specific repository
         _unitOfWork.Products.Update(product);

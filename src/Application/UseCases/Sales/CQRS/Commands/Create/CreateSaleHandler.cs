@@ -48,7 +48,7 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationRes
         }
 
         // 4. Prepare items with product data
-        var itemsWithPrices = new List<(Guid ProductId, Quantity Quantity, Money UnitPrice)>();
+        var itemsWithPrices = new List<(Guid ProductId, Quantity Quantity, decimal UnitPrice)>();
 
         foreach (var item in request.Items)
         {
@@ -62,7 +62,7 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationRes
             }
 
             var quantity = Quantity.Create(item.Quantity);
-            var unitPrice = Money.Create(product.UnitPrice);
+            var unitPrice = product.UnitPrice;
 
             itemsWithPrices.Add((item.ProductId, quantity, unitPrice));
         }
