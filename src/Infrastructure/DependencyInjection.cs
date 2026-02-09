@@ -1,4 +1,5 @@
 using Application.Events;
+using Application.Interfaces.Persistence;
 using Application.Interfaces.Services;
 using Domain.Repositories;
 using Domain.Services;

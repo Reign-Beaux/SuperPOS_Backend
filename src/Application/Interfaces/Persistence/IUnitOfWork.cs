@@ -1,6 +1,7 @@
 using Domain.Entities;
+using Domain.Repositories;
 
-namespace Domain.Repositories;
+namespace Application.Interfaces.Persistence;
 
 /// <summary>
 /// Unit of Work pattern interface for coordinating transactions across multiple repositories.
@@ -9,13 +10,6 @@ namespace Domain.Repositories;
 public interface IUnitOfWork : IDisposable
 {
     // Specific repositories as properties for type-safe access
-    IProductRepository Products { get; }
-    ICustomerRepository Customers { get; }
-    IUserRepository Users { get; }
-    ISaleRepository Sales { get; }
-    IInventoryRepository Inventories { get; }
-    IRoleRepository Roles { get; }
-    ICashRegisterRepository CashRegisters { get; }
 
     /// <summary>
     /// Generic repository accessor for aggregate roots that don't need specialized operations.
