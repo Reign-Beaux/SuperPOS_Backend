@@ -79,6 +79,8 @@ public class StockReservationService : IStockReservationService
     public async Task CommitReservationAsync(CancellationToken cancellationToken = default)
     {
         // Save changes to commit the stock updates
+        // Note: LowStockEvent is automatically raised by Inventory.RemoveStock() when stock falls below threshold
+        // The events will be dispatched automatically when SaveChangesAsync is called
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Clear reservation tracking

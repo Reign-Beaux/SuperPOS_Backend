@@ -1,4 +1,5 @@
 using Application.DesignPatterns.Mediators.Interfaces;
+using Application.Interfaces.Services;
 using Application.UseCases.CashRegisters.CQRS.Commands.Create;
 using Application.UseCases.CashRegisters.CQRS.Queries.GetAll;
 using Application.UseCases.CashRegisters.CQRS.Queries.GetById;
@@ -9,10 +10,12 @@ namespace Web.API.Controllers;
 public class CashRegisterController : BaseController
 {
     private readonly IMediator _mediator;
+    private readonly ITicketService _ticketService;
 
-    public CashRegisterController(IMediator mediator)
+    public CashRegisterController(IMediator mediator, ITicketService ticketService)
     {
         _mediator = mediator;
+        _ticketService = ticketService;
     }
 
     /// <summary>
@@ -52,5 +55,29 @@ public class CashRegisterController : BaseController
         var query = new CashRegisterGetAllQuery();
         var result = await _mediator.Send(query);
         return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Generate PDF report for a cash register closing
+    /// </summary>
+    /// <param name="id">Cash register ID</param>
+    /// <returns>PDF file</returns>
+    [HttpGet("{id:guid}/report")]
+    public async Task<IActionResult> GetReport(Guid id)
+    {
+        try
+        {
+            var pdfBytes = await _ticketService.GenerateCashRegisterReportAsync(id);
+            var fileName = $"Corte-Caja-{id.ToString().Substring(0, 8).ToUpper()}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error generating report", detail = ex.Message });
+        }
     }
 }

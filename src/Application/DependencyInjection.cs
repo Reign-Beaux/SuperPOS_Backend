@@ -1,4 +1,8 @@
 using Application.DesignPatterns.Mediators;
+using Application.Events;
+using Application.EventHandlers;
+using Domain.Events.Inventories;
+using Domain.Events.Sales;
 using Mapster;
 using MapsterMapper;
 using System.Reflection;
@@ -15,6 +19,7 @@ public static class DependencyInjection
         services
             .AddBehaviors()
             .AddFeaturesServices()
+            .AddEventHandlers()
             .AddMediator(assembly);
 
         services.AddMapster();
@@ -40,6 +45,15 @@ public static class DependencyInjection
 
     public static IServiceCollection AddFeaturesServices(this IServiceCollection services)
     {
+        return services;
+    }
+
+    public static IServiceCollection AddEventHandlers(this IServiceCollection services)
+    {
+        // Register event handlers
+        services.AddScoped<IEventHandler<LowStockEvent>, LowStockEventHandler>();
+        services.AddScoped<IEventHandler<SaleCancelledEvent>, SaleCancelledEventHandler>();
+
         return services;
     }
 }

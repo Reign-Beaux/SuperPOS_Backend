@@ -23,6 +23,12 @@ public class Sale : BaseEntity, IAggregateRoot
     public Guid UserId { get; set; }
     public decimal TotalAmount { get; private set; }  // Private setter to protect invariant
 
+    // Cancellation properties
+    public bool IsCancelled { get; private set; }
+    public DateTime? CancelledAt { get; private set; }
+    public Guid? CancelledByUserId { get; private set; }
+    public string? CancellationReason { get; private set; }
+
     // Navigation Properties
     public Customer Customer { get; set; } = null!;
     public User User { get; set; } = null!;
@@ -199,5 +205,35 @@ public class Sale : BaseEntity, IAggregateRoot
             var expectedTotal = d.UnitPrice * d.Quantity;
             return Math.Abs(d.Total - expectedTotal) < 0.01m; // Allow small rounding differences
         });
+    }
+
+    /// <summary>
+    /// Cancels the sale and raises a domain event to restore inventory.
+    /// </summary>
+    /// <param name="userId">ID of the user cancelling the sale</param>
+    /// <param name="reason">Reason for cancellation</param>
+    public void Cancel(Guid userId, string reason)
+    {
+        if (IsCancelled)
+            throw new BusinessRuleViolationException("SALE_007", "Sale is already cancelled");
+
+        if (userId == Guid.Empty)
+            throw new BusinessRuleViolationException("SALE_008", "User ID cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new BusinessRuleViolationException("SALE_009", "Cancellation reason is required");
+
+        IsCancelled = true;
+        CancelledAt = DateTime.UtcNow;
+        CancelledByUserId = userId;
+        CancellationReason = reason;
+
+        // Prepare items to restore
+        var itemsToRestore = _saleDetails
+            .Select(d => new SaleCancelledEvent.SaleItemToRestore(d.ProductId, d.Quantity))
+            .ToList();
+
+        // Raise domain event for inventory restoration
+        AddDomainEvent(new SaleCancelledEvent(Id, userId, reason, itemsToRestore));
     }
 }

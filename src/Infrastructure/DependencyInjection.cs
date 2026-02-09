@@ -6,6 +6,7 @@ using Domain.Services;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.Services;
 using Infrastructure.Services.Application;
 using Infrastructure.Services.Domain;
 
@@ -63,6 +64,10 @@ public static class DependencyInjection
         services.AddScoped<IUserUniquenessChecker, UserUniquenessChecker>();
         services.AddScoped<ISaleValidationService, SaleValidationService>();
         services.AddScoped<IStockReservationService, StockReservationService>();
+
+        // Application services
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<ITicketService, TicketService>();
 
         return services;
     }

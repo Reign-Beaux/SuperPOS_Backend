@@ -22,9 +22,22 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
           .IsRequired()
           .HasPrecision(18, 2);
 
+        // Cancellation properties
+        builder.Property(s => s.IsCancelled)
+          .IsRequired()
+          .HasDefaultValue(false);
+
+        builder.Property(s => s.CancelledAt);
+
+        builder.Property(s => s.CancelledByUserId);
+
+        builder.Property(s => s.CancellationReason)
+          .HasMaxLength(500);
+
         builder.HasIndex(s => s.CustomerId);
         builder.HasIndex(s => s.UserId);
         builder.HasIndex(s => s.CreatedAt);
+        builder.HasIndex(s => s.IsCancelled);
 
         // Relationships
         builder.HasOne(s => s.Customer)

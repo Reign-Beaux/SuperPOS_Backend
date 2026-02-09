@@ -4,7 +4,7 @@ namespace Domain.Entities.Emails;
 /// Email log for auditing all emails sent by the system.
 /// Tracks stock alerts, password recovery, and other notifications.
 /// </summary>
-public class EmailLog : BaseEntity
+public class EmailLog : BaseEntity, IAggregateRoot
 {
     // Parameterless constructor for EF Core
     public EmailLog() { }

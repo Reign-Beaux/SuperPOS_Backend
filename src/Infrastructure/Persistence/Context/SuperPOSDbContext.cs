@@ -9,6 +9,7 @@ using Domain.Entities.CashRegisters;
 using Domain.Entities.Emails;
 using Domain.Entities.Authentication;
 using Domain.Entities.Chat;
+using Domain.Entities.Returns;
 using Domain.ValueObjects;
 
 namespace Infrastructure.Persistence.Context;
@@ -28,6 +29,8 @@ public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : Db
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
     public DbSet<Conversation> Conversations { get; set; } = null!;
+    public DbSet<Return> Returns { get; set; } = null!;
+    public DbSet<ReturnDetail> ReturnDetails { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
