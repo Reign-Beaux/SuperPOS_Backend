@@ -1,3 +1,4 @@
+global using Application.Interfaces.Persistence;
 global using FluentValidation;
 global using Mapster;
 global using MapsterMapper;
