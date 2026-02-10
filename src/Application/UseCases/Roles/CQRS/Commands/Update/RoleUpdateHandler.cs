@@ -49,6 +49,6 @@ public sealed class RoleUpdateHandler
         _unitOfWork.Roles.Update(role);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.NoContent();
     }
 }

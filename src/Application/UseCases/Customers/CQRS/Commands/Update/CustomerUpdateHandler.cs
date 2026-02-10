@@ -67,6 +67,6 @@ public sealed class CustomerUpdateHandler
         _unitOfWork.Customers.Update(customer);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.NoContent();
     }
 }

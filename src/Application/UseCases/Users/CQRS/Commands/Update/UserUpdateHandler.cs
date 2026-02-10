@@ -93,6 +93,6 @@ public sealed class UserUpdateHandler
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.NoContent();
     }
 }

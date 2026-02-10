@@ -31,6 +31,6 @@ public sealed class CustomerDeleteHandler
         _unitOfWork.Customers.Delete(customer);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.NoContent();
     }
 }

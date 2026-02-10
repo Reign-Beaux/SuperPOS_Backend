@@ -9,4 +9,4 @@ public record CreateProductCommand(
     string? Description,
     string? Barcode,
     decimal UnitPrice
-) : IRequest<OperationResult<ProductDTO>>;
+) : IRequest<OperationResult<Guid>>;

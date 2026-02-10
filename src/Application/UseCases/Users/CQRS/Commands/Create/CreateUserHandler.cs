@@ -1,7 +1,6 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Application.Interfaces.Services;
-using Application.UseCases.Users.DTOs;
 using Domain.Entities.Roles;
 using Domain.Entities.Users;
 using Domain.Repositories;
@@ -11,36 +10,32 @@ using Domain.ValueObjects;
 namespace Application.UseCases.Users.CQRS.Commands.Create;
 
 public sealed class CreateUserHandler
-    : IRequestHandler<CreateUserCommand, OperationResult<UserDTO>>
+    : IRequestHandler<CreateUserCommand, OperationResult<Guid>>
 {
-    private readonly IMapper _mapper;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserUniquenessChecker _uniquenessChecker;
     private readonly IEncryptionService _encryptionService;
 
     public CreateUserHandler(
-        IMapper mapper,
         IUnitOfWork unitOfWork,
         IUserUniquenessChecker uniquenessChecker,
         IEncryptionService encryptionService)
     {
-        _mapper = mapper;
         _unitOfWork = unitOfWork;
         _uniquenessChecker = uniquenessChecker;
         _encryptionService = encryptionService;
     }
 
-    public async Task<OperationResult<UserDTO>> Handle(
+    public async Task<OperationResult<Guid>> Handle(
         CreateUserCommand request,
         CancellationToken cancellationToken)
     {
         // Validate role exists
         var role = await _unitOfWork.Repository<Role>().GetByIdAsync(request.RoleId, cancellationToken);
         if (role is null)
-            return new OperationResult<UserDTO>(
-                StatusResult.NotFound,
-                default!,
-                new Error { Title = "Not Found", Detail = $"Role with ID {request.RoleId} not found" });
+            return Result.Error(
+                ErrorResult.NotFound,
+                detail: $"Role with ID {request.RoleId} not found");
 
         // Validate email uniqueness
         var isEmailUnique = await _uniquenessChecker.IsEmailUniqueAsync(
@@ -79,8 +74,8 @@ public sealed class CreateUserHandler
         // Load Role for response
         user.Role = role;
 
-        var userDto = _mapper.Map<UserDTO>(user);
+        
 
-        return new OperationResult<UserDTO>(StatusResult.Created, userDto);
+        return Result.Created(user.Id);
     }
 }

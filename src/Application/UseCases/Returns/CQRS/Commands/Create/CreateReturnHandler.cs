@@ -1,24 +1,22 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Application.Interfaces.Persistence;
-using Application.UseCases.Returns.DTOs;
 using Domain.Entities.Returns;
 using MapsterMapper;
 
 namespace Application.UseCases.Returns.CQRS.Commands.Create;
 
-public class CreateReturnHandler : IRequestHandler<CreateReturnCommand, OperationResult<ReturnDTO>>
+public class CreateReturnHandler : IRequestHandler<CreateReturnCommand, OperationResult<Guid>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
 
     public CreateReturnHandler(IUnitOfWork unitOfWork, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
+        
     }
 
-    public async Task<OperationResult<ReturnDTO>> Handle(CreateReturnCommand request, CancellationToken cancellationToken)
+    public async Task<OperationResult<Guid>> Handle(CreateReturnCommand request, CancellationToken cancellationToken)
     {
         // 1. Validate sale exists
         var sale = await _unitOfWork.Sales.GetByIdWithDetailsAsync(request.SaleId, cancellationToken);
@@ -73,8 +71,7 @@ public class CreateReturnHandler : IRequestHandler<CreateReturnCommand, Operatio
 
         // 8. Load with details and map to DTO
         var createdReturn = await _unitOfWork.Returns.GetByIdWithDetailsAsync(returnEntity.Id, cancellationToken);
-        var dto = _mapper.Map<ReturnDTO>(createdReturn);
 
-        return new OperationResult<ReturnDTO>(StatusResult.Created, dto);
+        return Result.Created(returnEntity.Id);
     }
 }

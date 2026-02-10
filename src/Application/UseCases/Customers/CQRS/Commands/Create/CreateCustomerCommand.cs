@@ -11,4 +11,4 @@ public record CreateCustomerCommand(
     string? Phone,
     string? Email,
     DateTime? BirthDate
-) : IRequest<OperationResult<CustomerDTO>>;
+) : IRequest<OperationResult<Guid>>;

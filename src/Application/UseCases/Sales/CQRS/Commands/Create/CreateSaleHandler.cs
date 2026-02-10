@@ -1,6 +1,5 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.UseCases.Sales.DTOs;
 using Domain.Entities.Sales;
 using Domain.Repositories;
 using Domain.Services;
@@ -8,10 +7,9 @@ using Domain.ValueObjects;
 
 namespace Application.UseCases.Sales.CQRS.Commands.Create;
 
-public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationResult<SaleDTO>>
+public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationResult<Guid>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly ISaleValidationService _saleValidationService;
     private readonly IStockReservationService _stockReservationService;
 
@@ -22,12 +20,12 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationRes
         IStockReservationService stockReservationService)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
+        
         _saleValidationService = saleValidationService;
         _stockReservationService = stockReservationService;
     }
 
-    public async Task<OperationResult<SaleDTO>> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
+    public async Task<OperationResult<Guid>> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
     {
         // 1. Validate basic input
         if (request.Items == null || request.Items.Count == 0)
@@ -101,8 +99,7 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationRes
                 return Result.Error(ErrorResult.BadRequest, detail: "Error loading created sale");
             }
 
-            var dto = _mapper.Map<SaleDTO>(createdSale);
-            return new OperationResult<SaleDTO>(StatusResult.Created, dto);
+            return Result.Created(createdSale.Id);
         }
         catch (Domain.Exceptions.DomainException ex)
         {

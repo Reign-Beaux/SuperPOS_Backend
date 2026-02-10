@@ -10,4 +10,4 @@ public record CreateSaleCommand(
     Guid CustomerId,
     Guid UserId,
     List<SaleItemInput> Items
-) : IRequest<OperationResult<SaleDTO>>;
+) : IRequest<OperationResult<Guid>>;

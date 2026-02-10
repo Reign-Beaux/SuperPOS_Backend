@@ -7,4 +7,4 @@ namespace Application.UseCases.Roles.CQRS.Commands.Create;
 public record CreateRoleCommand(
     string Name,
     string? Description
-) : IRequest<OperationResult<RoleDTO>>;
+) : IRequest<OperationResult<Guid>>;

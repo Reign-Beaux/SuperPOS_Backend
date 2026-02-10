@@ -1,6 +1,5 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.UseCases.Customers.DTOs;
 using Domain.Entities.Customers;
 using Domain.Repositories;
 using Domain.Services;
@@ -9,9 +8,8 @@ using Domain.ValueObjects;
 namespace Application.UseCases.Customers.CQRS.Commands.Create;
 
 public sealed class CreateCustomerHandler
-    : IRequestHandler<CreateCustomerCommand, OperationResult<CustomerDTO>>
+    : IRequestHandler<CreateCustomerCommand, OperationResult<Guid>>
 {
-    private readonly IMapper _mapper;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICustomerUniquenessChecker _uniquenessChecker;
 
@@ -20,12 +18,12 @@ public sealed class CreateCustomerHandler
         IUnitOfWork unitOfWork,
         ICustomerUniquenessChecker uniquenessChecker)
     {
-        _mapper = mapper;
+        
         _unitOfWork = unitOfWork;
         _uniquenessChecker = uniquenessChecker;
     }
 
-    public async Task<OperationResult<CustomerDTO>> Handle(
+    public async Task<OperationResult<Guid>> Handle(
         CreateCustomerCommand request,
         CancellationToken cancellationToken)
     {
@@ -66,8 +64,8 @@ public sealed class CreateCustomerHandler
                 ErrorResult.BadRequest,
                 detail: CustomerMessages.Create.Failed);
 
-        var customerDto = _mapper.Map<CustomerDTO>(customer);
+        
 
-        return new OperationResult<CustomerDTO>(StatusResult.Created, customerDto);
+        return Result.Created(customer.Id);
     }
 }

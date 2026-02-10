@@ -31,6 +31,6 @@ public sealed class UserDeleteHandler
         _unitOfWork.Users.Delete(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.NoContent();
     }
 }

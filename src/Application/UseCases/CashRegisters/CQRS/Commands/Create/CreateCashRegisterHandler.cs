@@ -127,6 +127,6 @@ public sealed class CreateCashRegisterHandler : IRequestHandler<CreateCashRegist
             Sales: saleDTOs
         );
 
-        return new OperationResult<CashRegisterReportDTO>(StatusResult.Created, report);
+        return Result.Success(report);
     }
 }

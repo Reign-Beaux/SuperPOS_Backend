@@ -12,7 +12,7 @@ public record CreateReturnCommand(
     ReturnType Type,
     string Reason,
     List<ReturnItemRequest> Items
-) : IRequest<OperationResult<ReturnDTO>>;
+) : IRequest<OperationResult<Guid>>;
 
 public record ReturnItemRequest(
     Guid ProductId,

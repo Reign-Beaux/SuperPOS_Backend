@@ -1,24 +1,22 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.UseCases.Roles.DTOs;
 using Domain.Entities.Roles;
 using Domain.Repositories;
 
 namespace Application.UseCases.Roles.CQRS.Commands.Create;
 
 public sealed class CreateRoleHandler
-    : IRequestHandler<CreateRoleCommand, OperationResult<RoleDTO>>
+    : IRequestHandler<CreateRoleCommand, OperationResult<Guid>>
 {
-    private readonly IMapper _mapper;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateRoleHandler(IMapper mapper, IUnitOfWork unitOfWork)
+    public CreateRoleHandler(IUnitOfWork unitOfWork)
     {
-        _mapper = mapper;
+        
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<OperationResult<RoleDTO>> Handle(
+    public async Task<OperationResult<Guid>> Handle(
         CreateRoleCommand request,
         CancellationToken cancellationToken)
     {
@@ -32,7 +30,11 @@ public sealed class CreateRoleHandler
                 ErrorResult.Exists,
                 detail: RoleMessages.AlreadyExists.WithName(request.Name));
 
-        var role = _mapper.Map<Role>(request);
+        var role = new Role
+        {
+            Name = request.Name,
+            Description = request.Description
+        };
 
         _unitOfWork.Roles.Add(role);
 
@@ -43,8 +45,6 @@ public sealed class CreateRoleHandler
                 ErrorResult.BadRequest,
                 detail: RoleMessages.Create.Failed);
 
-        var roleDto = _mapper.Map<RoleDTO>(role);
-
-        return new OperationResult<RoleDTO>(StatusResult.Created, roleDto);
+        return Result.Created(role.Id);
     }
 }

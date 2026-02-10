@@ -1,6 +1,5 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Application.UseCases.Products.DTOs;
 using Domain.Entities.Products;
 using Domain.Repositories;
 using Domain.Services;
@@ -9,23 +8,20 @@ using Domain.ValueObjects;
 namespace Application.UseCases.Products.CQRS.Commands.Create;
 
 public sealed class CreateProductHandler
-    : IRequestHandler<CreateProductCommand, OperationResult<ProductDTO>>
+    : IRequestHandler<CreateProductCommand, OperationResult<Guid>>
 {
-    private readonly IMapper _mapper;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProductUniquenessChecker _uniquenessChecker;
 
     public CreateProductHandler(
-        IMapper mapper,
         IUnitOfWork unitOfWork,
         IProductUniquenessChecker uniquenessChecker)
     {
-        _mapper = mapper;
         _unitOfWork = unitOfWork;
         _uniquenessChecker = uniquenessChecker;
     }
 
-    public async Task<OperationResult<ProductDTO>> Handle(
+    public async Task<OperationResult<Guid>> Handle(
         CreateProductCommand request,
         CancellationToken cancellationToken)
     {
@@ -74,8 +70,6 @@ public sealed class CreateProductHandler
                 ErrorResult.BadRequest,
                 detail: ProductMessages.Create.Failed);
 
-        var productDto = _mapper.Map<ProductDTO>(product);
-
-        return new OperationResult<ProductDTO>(StatusResult.Created, productDto);
+        return Result.Created(product.Id);
     }
 }

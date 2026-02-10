@@ -31,6 +31,6 @@ public sealed class ProductDeleteHandler
         _unitOfWork.Products.Delete(product);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.NoContent();
     }
 }

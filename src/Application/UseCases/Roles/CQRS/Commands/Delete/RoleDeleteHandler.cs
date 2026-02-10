@@ -31,6 +31,6 @@ public sealed class RoleDeleteHandler
         _unitOfWork.Roles.Delete(role);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+        return Result.NoContent();
     }
 }

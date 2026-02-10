@@ -12,4 +12,4 @@ public record CreateUserCommand(
     string Password,
     string? Phone,
     Guid RoleId
-) : IRequest<OperationResult<UserDTO>>;
+) : IRequest<OperationResult<Guid>>;
