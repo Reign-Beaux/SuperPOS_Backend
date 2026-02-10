@@ -161,6 +161,8 @@ using Domain.Entities.{Entity};                         // Entity classes
      - `_unitOfWork.Users` - IUserRepository (with SearchByNameAsync)
      - `_unitOfWork.Sales` - ISaleRepository (with GetByDateRangeAsync, GetByIdWithDetailsAsync, etc.)
      - `_unitOfWork.Inventories` - IInventoryRepository (with GetByProductIdAsync, GetLowStockItemsAsync)
+     - `_unitOfWork.Returns` - IReturnRepository (with GetByStatusAsync, GetBySaleIdAsync, etc.)
+     - `_unitOfWork.CashRegisters` - ICashRegisterRepository (with GetByIdWithDetailsAsync)
      - `_unitOfWork.Roles` - IRoleRepository
    - Generic access: `_unitOfWork.Repository<EntityType>()`
    - **Note:** Base repository does NOT support eager loading. However, specific repositories (like ISaleRepository) have custom methods with eager loading (e.g., `GetByIdWithDetailsAsync()`)
@@ -226,9 +228,34 @@ using Domain.Entities.{Entity};                         // Entity classes
   },
   "CorsSettings": {
     "Origins": ["http://localhost:3000"]
+  },
+  "EmailSettings": {
+    "SmtpServer": "smtp.gmail.com",
+    "SmtpPort": 587,
+    "SenderEmail": "noreply@superpos.com",
+    "SenderName": "SuperPOS System",
+    "Username": "your-email@gmail.com",
+    "Password": "your-app-password",
+    "EnableSsl": true
+  },
+  "StockSettings": {
+    "LowStockThreshold": 10
+  },
+  "BusinessInfo": {
+    "Name": "Super POS",
+    "Address": "Av. Principal #123, Col. Centro, Ciudad",
+    "Phone": "(555) 123-4567",
+    "Email": "contacto@superpos.com",
+    "RFC": "XAXX010101000",
+    "TaxRegime": "General de Ley Personas Morales"
   }
 }
 ```
+
+**Notes:**
+- `EmailSettings`: Required for low stock alert emails (uses MailKit/SMTP)
+- `StockSettings.LowStockThreshold`: Triggers email alerts when stock ≤ this value (default: 10)
+- `BusinessInfo`: Required for PDF ticket generation (business details on tickets and reports)
 
 ### User Secrets
 - User secrets ID: `7758d9ef-4f1e-495a-9803-32babd135164`
@@ -241,6 +268,20 @@ using Domain.Entities.{Entity};                         // Entity classes
 All configuration can be overridden via environment variables using the format:
 - `ConnectionStrings__SuperPOS`
 - `CorsSettings__Origins__0`
+
+### External NuGet Packages
+
+**Core Packages** (already installed):
+- Entity Framework Core 10.x
+- Mapster / MapsterMapper
+- Microsoft.Extensions.*
+
+**Feature-Specific Packages**:
+- **MailKit 4.14.1** - SMTP email sending (low stock alerts)
+- **MimeKit 4.14.0** - Email message composition (required by MailKit)
+- **QuestPDF 2025.12.4** - PDF generation (tickets and reports)
+  - Uses Community License (free for non-commercial use)
+  - For production commercial use, acquire appropriate license
 
 ## Dependency Injection
 
@@ -260,13 +301,20 @@ Each layer registers its services via extension methods:
 
 ### Infrastructure Layer - `AddInfrastructure()`
 - DbContext (`SuperPOSDbContext`) with SQL Server
-- `IUnitOfWork` and all repository implementations
+- `IUnitOfWork` and all repository implementations (Products, Customers, Users, Sales, Inventories, CashRegisters, Returns, Roles, EmailLogs)
 - Domain services implementations:
   - `IProductUniquenessChecker`, `ICustomerUniquenessChecker`, `IUserUniquenessChecker`
   - `ISaleValidationService` (validates customer/user existence)
   - `IStockReservationService` (two-phase stock reservation with commit/rollback)
+- Application services:
+  - `IEmailService` (MailKit email notifications with HTML templates)
+  - `ITicketService` (QuestPDF ticket and report generation)
 - `IEncryptionService` (password hashing)
-- `IDomainEventDispatcher`
+- `IDomainEventDispatcher` (dispatches domain events to handlers)
+- Event handlers:
+  - `LowStockEventHandler` (sends email alerts)
+  - `SaleCancelledEventHandler` (restores inventory)
+  - `ReturnApprovedEventHandler` (restores inventory)
 - Caching (placeholder for future implementation)
 
 ## Mapster Configuration
@@ -430,6 +478,20 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
   - `CommitReservationAsync()` - Phase 2: Commit changes
   - `RollbackReservationAsync()` - Rollback if sale creation fails
 
+### Application Services
+
+**Purpose:** Application-level services for cross-cutting concerns. Interfaces in `Application/Interfaces/Services/`, implementations in `Infrastructure/Services/`.
+
+- **IEmailService** - Email notifications using MailKit/MimeKit
+  - `SendLowStockAlertAsync()` - Sends HTML email alerts to managers when stock ≤ threshold
+  - Logs all email attempts to `EmailLog` table
+  - Configuration via `EmailSettings` in appsettings.json
+
+- **ITicketService** - PDF generation using QuestPDF
+  - `GenerateSaleTicketAsync()` - Generates professional sale tickets with business info, products, subtotal, IVA (16%), total
+  - `GenerateCashRegisterReportAsync()` - Generates cash register reports with financial summary, statistics, and sales detail
+  - Configuration via `BusinessInfo` in appsettings.json
+
 ## Current Project State
 
 ### ✅ Fully Implemented Features
@@ -438,13 +500,17 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 2. **Customer Management** - CRUD, search by name
 3. **User Management** - CRUD, search by name with role, password hashing
 4. **Role Management** - CRUD operations
-5. **Inventory Management** - Stock adjustment (Add/Set/Remove operations)
-6. **Sales Management** - Create sales with stock reservation and validation
-7. **Search Functionality** - Products, Customers, and Users
-8. **Soft Delete** - All entities support soft delete with timestamp
-9. **Value Objects** - Money, Email, PersonName, PhoneNumber, Barcode, Quantity
-10. **Domain Events** - Product created/price changed, sale created, stock events
-11. **Two-Phase Stock Reservation** - Prevents overselling
+5. **Inventory Management** - Stock adjustment (Add/Set/Remove operations), automatic restoration on sale cancellation/return approval
+6. **Sales Management** - Create sales with stock reservation and validation, sale cancellation with inventory rollback, PDF ticket generation
+7. **Cash Register** - Create cash register close, automatic sales calculation, PDF report generation
+8. **Returns & Exchanges** - Complete return workflow (create, approve, reject), 30-day window validation, automatic inventory restoration
+9. **Email Notifications** - Low stock alerts sent to managers (MailKit), email logging (EmailLog entity)
+10. **PDF Generation** - Professional tickets and cash register reports (QuestPDF)
+11. **Search Functionality** - Products, Customers, and Users
+12. **Soft Delete** - All entities support soft delete with timestamp
+13. **Value Objects** - Money, Email, PersonName, PhoneNumber, Barcode, Quantity
+14. **Domain Events** - Product created/price changed, sale created/cancelled, low stock detected, return approved
+15. **Two-Phase Stock Reservation** - Prevents overselling with validate/reserve, commit/rollback pattern
 
 ### ⚠️ Implemented Infrastructure, Not Used
 
@@ -454,12 +520,11 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 ### ❌ Not Implemented
 
 1. **Payment Methods** - Sales do not track payment type (cash, card, etc.)
-2. **Reporting** - No analytics or reports (corte de caja, sales reports, etc.)
-3. **Authentication/Authorization** - No JWT or auth middleware
-4. **Sale Updates/Cancellation** - Sales are create-only (no update/delete commands)
-5. **Product Categories** - No product categorization
-6. **Unit Tests** - No test projects exist
-7. **Caching** - Placeholder only
+2. **Authentication/Authorization** - No JWT or auth middleware
+3. **Product Categories** - No product categorization
+4. **Unit Tests** - No test projects exist
+5. **Caching** - Placeholder only
+6. **Sale Updates** - Sales can be cancelled but not edited (immutable after creation)
 
 ### Important Notes
 
@@ -470,6 +535,14 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 - **Messages:** All user-facing messages are in Spanish
 - **Specific Repositories:** Some entities (Sales, Products, etc.) have specialized repository methods. Always check `IUnitOfWork` properties before using generic `Repository<T>()`
 - **CreatedAtAction:** All POST endpoints that create resources must pass `nameof(GetById)` to `HandleResult()` for proper Location header generation
+- **Domain Events:** Event-driven architecture in place:
+  - Events raised by aggregate roots (Sale, Inventory, Return)
+  - Event handlers registered in DI and executed automatically on SaveChangesAsync
+  - Examples: LowStockEvent → email alerts, SaleCancelledEvent → inventory restoration, ReturnApprovedEvent → inventory restoration
+- **Immutable Sales:** Sales cannot be edited after creation, only cancelled (with automatic inventory rollback)
+- **Return Window:** Returns must be requested within 30 days of the original sale
+- **Email Configuration:** Requires valid SMTP credentials in EmailSettings. Use Gmail app passwords for development.
+- **PDF License:** QuestPDF Community License in use. For commercial production, acquire appropriate license.
 
 ## Complete Implementation Examples
 
