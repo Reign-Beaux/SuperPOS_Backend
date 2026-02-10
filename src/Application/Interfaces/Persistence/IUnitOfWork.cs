@@ -17,6 +17,7 @@ public interface IUnitOfWork : IDisposable
     IInventoryRepository Inventories { get; }
     IRoleRepository Roles { get; }
     ICashRegisterRepository CashRegisters { get; }
+    IReturnRepository Returns { get; }
 
     /// <summary>
     /// Generic repository accessor for aggregate roots that don't need specialized operations.

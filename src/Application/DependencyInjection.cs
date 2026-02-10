@@ -2,6 +2,7 @@ using Application.DesignPatterns.Mediators;
 using Application.Events;
 using Application.EventHandlers;
 using Domain.Events.Inventories;
+using Domain.Events.Returns;
 using Domain.Events.Sales;
 using Mapster;
 using MapsterMapper;
@@ -53,6 +54,7 @@ public static class DependencyInjection
         // Register event handlers
         services.AddScoped<IEventHandler<LowStockEvent>, LowStockEventHandler>();
         services.AddScoped<IEventHandler<SaleCancelledEvent>, SaleCancelledEventHandler>();
+        services.AddScoped<IEventHandler<ReturnApprovedEvent>, ReturnApprovedEventHandler>();
 
         return services;
     }

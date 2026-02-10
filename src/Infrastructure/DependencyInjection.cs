@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<ISaleRepository, SaleRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IReturnRepository, ReturnRepository>();
 
         // Register generic repository base for minor entities
         services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
