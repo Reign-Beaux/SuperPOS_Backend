@@ -8,5 +8,9 @@ public record SaleDTO(
     string UserName,
     decimal TotalAmount,
     DateTime CreatedAt,
+    bool IsCancelled,
+    DateTime? CancelledAt,
+    Guid? CancelledByUserId,
+    string? CancellationReason,
     List<SaleDetailDTO> Details
 );
