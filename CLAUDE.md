@@ -177,10 +177,46 @@ using Domain.Entities.{Entity};                         // Entity classes
 ### Database Conventions
 
 - All entities inherit from `BaseEntity` (Guid v7 ID, CreatedAt, UpdatedAt, DeletedAt)
-- Catalog entities inherit from `BaseCatalog` (extends BaseEntity with Name, Description)
+- Catalog entities inherit from `BaseCatalog` (extends BaseEntity with Name, Description?)
+  - **Note:** `Description` is nullable (string?) in `BaseCatalog` as of 2026-02-11
 - Soft deletes: `DeletedAt` is set instead of removing rows
 - Connection string: `SuperPOS` in configuration
 - SQL Server via EF Core 10
+
+### Nullable Reference Types
+
+**Status**: ✅ Enabled in all projects (`<Nullable>enable</Nullable>`)
+
+**Important Guidelines**:
+- ✅ All nullable warnings have been resolved (as of 2026-02-11)
+- ❌ **Never use null-forgiving operator (`!`)** without null validation
+- ✅ Always validate null before assignment when using `FirstOrDefaultAsync()`
+- ✅ Use `string?` for optional parameters
+- ✅ Use null-coalescing operator (`??`) for default values
+
+**Common Patterns**:
+
+```csharp
+// ❌ WRONG - Null-forgiving without validation
+user.Role = (await _context.Set<Role>().FirstOrDefaultAsync(...))!;
+
+// ✅ CORRECT - Validate before assignment
+var role = await _context.Set<Role>().FirstOrDefaultAsync(...);
+if (role != null)
+    user.Role = role;
+
+// ✅ CORRECT - Nullable parameter with default
+public static string WithName(string? value) =>
+    $"Product with name '{value ?? "unknown"}' already exists";
+
+// ✅ CORRECT - Argument validation for non-nullable parameters
+public async Task SendEmailAsync(string recipientEmail, ...)
+{
+    if (string.IsNullOrWhiteSpace(recipientEmail))
+        throw new ArgumentException("Recipient email cannot be null or empty", nameof(recipientEmail));
+    // ...
+}
+```
 
 ## Adding a New Entity
 
@@ -508,9 +544,10 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 10. **PDF Generation** - Professional tickets and cash register reports (QuestPDF)
 11. **Search Functionality** - Products, Customers, and Users
 12. **Soft Delete** - All entities support soft delete with timestamp
-13. **Value Objects** - Money, Email, PersonName, PhoneNumber, Barcode, Quantity
+13. **Value Objects** - Email, PersonName, PhoneNumber, Barcode, Quantity (Money was removed)
 14. **Domain Events** - Product created/price changed, sale created/cancelled, low stock detected, return approved
 15. **Two-Phase Stock Reservation** - Prevents overselling with validate/reserve, commit/rollback pattern
+16. **Nullable Reference Types** - All projects have nullable enabled, all warnings resolved (2026-02-11)
 
 ### ⚠️ Implemented Infrastructure, Not Used
 
@@ -543,6 +580,8 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 - **Return Window:** Returns must be requested within 30 days of the original sale
 - **Email Configuration:** Requires valid SMTP credentials in EmailSettings. Use Gmail app passwords for development.
 - **PDF License:** QuestPDF Community License in use. For commercial production, acquire appropriate license.
+- **Nullable References:** All projects have `<Nullable>enable</Nullable>`. Never use `!` operator without null validation. Always validate `FirstOrDefaultAsync()` results before assignment.
+- **BaseCatalog.Description:** Changed from `string` to `string?` (nullable) as of migration `FixNullableDescriptions` (2026-02-11).
 
 ## Complete Implementation Examples
 
