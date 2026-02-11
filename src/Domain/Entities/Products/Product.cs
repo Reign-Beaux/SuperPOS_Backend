@@ -36,7 +36,7 @@ public class Product : BaseCatalog, IAggregateRoot
     /// Enforces business rules at creation time.
     /// Validates that unit price is positive.
     /// </summary>
-    public static Product Create(string name, string description, Barcode? barcode, decimal unitPrice)
+    public static Product Create(string name, string? description, Barcode? barcode, decimal unitPrice)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new BusinessRuleViolationException("PRODUCT_001", "Product name cannot be empty");
@@ -103,7 +103,7 @@ public class Product : BaseCatalog, IAggregateRoot
     /// <summary>
     /// Updates basic product information.
     /// </summary>
-    public void UpdateInfo(string name, string description)
+    public void UpdateInfo(string name, string? description)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new BusinessRuleViolationException("PRODUCT_001", "Product name cannot be empty");

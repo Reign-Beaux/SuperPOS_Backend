@@ -1,6 +1,5 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Domain.Repositories;
 using Application.UseCases.Users.DTOs;
 using Domain.Entities.Roles;
 
@@ -26,7 +25,9 @@ public sealed class UserGetAllHandler : IRequestHandler<UserGetAllQuery, Operati
         // Load Role for each user
         foreach (var user in users)
         {
-            user.Role = (await _unitOfWork.Repository<Role>().GetByIdAsync(user.RoleId, cancellationToken))!;
+            var role = await _unitOfWork.Repository<Role>().GetByIdAsync(user.RoleId, cancellationToken);
+            if (role != null)
+                user.Role = role;
         }
 
         var usersDto = _mapper.Map<IEnumerable<UserDTO>>(users);

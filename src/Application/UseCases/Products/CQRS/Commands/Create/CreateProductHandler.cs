@@ -1,7 +1,6 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Domain.Entities.Products;
-using Domain.Repositories;
 using Domain.Services;
 using Domain.ValueObjects;
 

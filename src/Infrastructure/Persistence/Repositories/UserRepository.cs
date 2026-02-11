@@ -55,8 +55,10 @@ public sealed class UserRepository : RepositoryBase<User>, IUserRepository
 
         if (user != null)
         {
-            user.Role = (await _context.Set<Role>()
-                .FirstOrDefaultAsync(r => r.Id == user.RoleId && r.DeletedAt == null, cancellationToken))!;
+            var role = await _context.Set<Role>()
+                .FirstOrDefaultAsync(r => r.Id == user.RoleId && r.DeletedAt == null, cancellationToken);
+            if (role != null)
+                user.Role = role;
         }
 
         return user;
@@ -68,8 +70,10 @@ public sealed class UserRepository : RepositoryBase<User>, IUserRepository
 
         if (user != null)
         {
-            user.Role = (await _context.Set<Role>()
-                .FirstOrDefaultAsync(r => r.Id == user.RoleId && r.DeletedAt == null, cancellationToken))!;
+            var role = await _context.Set<Role>()
+                .FirstOrDefaultAsync(r => r.Id == user.RoleId && r.DeletedAt == null, cancellationToken);
+            if (role != null)
+                user.Role = role;
         }
 
         return user;

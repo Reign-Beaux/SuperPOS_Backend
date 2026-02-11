@@ -24,14 +24,14 @@ public static class ProductMessages
     public static class NotFound
     {
         public const string General = "El producto no existe.";
-        public static string WithId(string value) => string.Format("El producto con Id {0} no existe.", value);
+        public static string WithId(string? value) => string.Format("El producto con Id {0} no existe.", value ?? "desconocido");
         public const string WithName = "El producto con nombre '{0}' no existe.";
         public const string WithBarcode = "El producto con código de barras '{0}' no existe.";
     }
 
     public static class AlreadyExists
     {
-        public static string WithName(string value) => string.Format("Ya existe un producto con el nombre '{0}'.", value);
-        public static string WithBarcode(string value) => string.Format("Ya existe un producto con el código de barras '{0}'.", value);
+        public static string WithName(string? value) => string.Format("Ya existe un producto con el nombre '{0}'.", value ?? "desconocido");
+        public static string WithBarcode(string? value) => string.Format("Ya existe un producto con el código de barras '{0}'.", value ?? "desconocido");
     }
 }

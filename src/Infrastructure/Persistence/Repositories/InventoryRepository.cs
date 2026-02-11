@@ -42,8 +42,10 @@ public sealed class InventoryRepository : RepositoryBase<Inventory>, IInventoryR
 
         if (inventory != null)
         {
-            inventory.Product = (await _context.Set<Product>()
-                .FirstOrDefaultAsync(p => p.Id == inventory.ProductId && p.DeletedAt == null, cancellationToken))!;
+            var product = await _context.Set<Product>()
+                .FirstOrDefaultAsync(p => p.Id == inventory.ProductId && p.DeletedAt == null, cancellationToken);
+            if (product != null)
+                inventory.Product = product;
         }
 
         return inventory;

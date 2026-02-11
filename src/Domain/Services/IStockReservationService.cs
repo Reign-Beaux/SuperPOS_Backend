@@ -14,7 +14,7 @@ public interface IStockReservationService
     /// </summary>
     /// <param name="items">List of (ProductId, Quantity) to reserve</param>
     /// <returns>Success true if all stock is available, false with error message otherwise</returns>
-    Task<(bool Success, string ErrorMessage)> ValidateAndReserveStockAsync(
+    Task<(bool Success, string? ErrorMessage)> ValidateAndReserveStockAsync(
         List<(Guid ProductId, Quantity Quantity)> items,
         CancellationToken cancellationToken = default);
 

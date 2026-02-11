@@ -24,12 +24,12 @@ public static class CustomerMessages
     public static class NotFound
     {
         public const string General = "El cliente no existe.";
-        public static string WithId(string value) => string.Format("El cliente con Id {0} no existe.", value);
+        public static string WithId(string? value) => string.Format("El cliente con Id {0} no existe.", value ?? "desconocido");
         public const string WithEmail = "El cliente con email '{0}' no existe.";
     }
 
     public static class AlreadyExists
     {
-        public static string WithEmail(string value) => string.Format("Ya existe un cliente con el email '{0}'.", value);
+        public static string WithEmail(string? value) => string.Format("Ya existe un cliente con el email '{0}'.", value ?? "desconocido");
     }
 }

@@ -11,8 +11,8 @@ public static class SaleMessages
         public const string InsufficientStock = "Stock insuficiente para el producto";
         public const string ProductNotFound = "Uno o más productos no existen";
 
-        public static string WithProductName(string productName, int available, int required) =>
-            $"Stock insuficiente para '{productName}'. Disponible: {available}, Requerido: {required}";
+        public static string WithProductName(string? productName, int available, int required) =>
+            $"Stock insuficiente para '{productName ?? "desconocido"}'. Disponible: {available}, Requerido: {required}";
 
         public static string ProductNotFoundWithId(Guid productId) =>
             $"Producto no encontrado con ID: {productId}";

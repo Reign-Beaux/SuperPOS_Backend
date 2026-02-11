@@ -1,6 +1,5 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
-using Domain.Repositories;
 using Application.UseCases.Inventories.DTOs;
 using Domain.Entities.Inventories;
 using Domain.Entities.Products;
@@ -31,7 +30,9 @@ public class InventoryGetByProductIdHandler : IRequestHandler<InventoryGetByProd
         }
 
         // Cargar el producto manualmente
-        inventory.Product = (await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken))!;
+        var product = await _unitOfWork.Repository<Product>().GetByIdAsync(inventory.ProductId, cancellationToken);
+        if (product != null)
+            inventory.Product = product;
 
         var dto = _mapper.Map<InventoryDTO>(inventory);
         return Result.Success(dto);

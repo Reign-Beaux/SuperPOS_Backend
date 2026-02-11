@@ -24,12 +24,12 @@ public static class RoleMessages
     public static class NotFound
     {
         public const string General = "El rol no existe.";
-        public static string WithId(string value) => string.Format("El rol con Id {0} no existe.", value);
+        public static string WithId(string? value) => string.Format("El rol con Id {0} no existe.", value ?? "desconocido");
         public const string WithName = "El rol con nombre '{0}' no existe.";
     }
 
     public static class AlreadyExists
     {
-        public static string WithName(string value) => string.Format("Ya existe un rol con el nombre '{0}'.", value);
+        public static string WithName(string? value) => string.Format("Ya existe un rol con el nombre '{0}'.", value ?? "desconocido");
     }
 }

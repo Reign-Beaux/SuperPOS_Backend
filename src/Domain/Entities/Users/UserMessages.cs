@@ -24,12 +24,12 @@ public static class UserMessages
     public static class NotFound
     {
         public const string General = "El usuario no existe.";
-        public static string WithId(string value) => string.Format("El usuario con Id {0} no existe.", value);
+        public static string WithId(string? value) => string.Format("El usuario con Id {0} no existe.", value ?? "desconocido");
         public const string WithEmail = "El usuario con email '{0}' no existe.";
     }
 
     public static class AlreadyExists
     {
-        public static string WithEmail(string value) => string.Format("Ya existe un usuario con el email '{0}'.", value);
+        public static string WithEmail(string? value) => string.Format("Ya existe un usuario con el email '{0}'.", value ?? "desconocido");
     }
 }

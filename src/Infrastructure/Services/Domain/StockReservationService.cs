@@ -1,5 +1,4 @@
 using Domain.Entities.Inventories;
-using Domain.Repositories;
 using Domain.Services;
 using Domain.ValueObjects;
 
@@ -19,7 +18,7 @@ public class StockReservationService : IStockReservationService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<(bool Success, string ErrorMessage)> ValidateAndReserveStockAsync(
+    public async Task<(bool Success, string? ErrorMessage)> ValidateAndReserveStockAsync(
         List<(Guid ProductId, Quantity Quantity)> items,
         CancellationToken cancellationToken = default)
     {
@@ -54,7 +53,7 @@ public class StockReservationService : IStockReservationService
                 _unitOfWork.Inventories.Update(inventory);
             }
 
-            return (true, string.Empty);
+            return (true, null);
         }
         catch (global::Domain.Exceptions.InsufficientStockException ex)
         {

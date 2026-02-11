@@ -26,6 +26,12 @@ public class EmailService : IEmailService
         int currentStock,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+            throw new ArgumentException("Recipient email cannot be null or empty", nameof(recipientEmail));
+
+        if (string.IsNullOrWhiteSpace(productName))
+            throw new ArgumentException("Product name cannot be null or empty", nameof(productName));
+
         var subject = "⚠️ Alerta de Stock Bajo - SuperPOS";
         var body = BuildLowStockEmailBody(productName, barcode, currentStock);
 
@@ -39,6 +45,18 @@ public class EmailService : IEmailService
         string emailType,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(to))
+            throw new ArgumentException("Recipient email cannot be null or empty", nameof(to));
+
+        if (string.IsNullOrWhiteSpace(subject))
+            throw new ArgumentException("Subject cannot be null or empty", nameof(subject));
+
+        if (string.IsNullOrWhiteSpace(body))
+            throw new ArgumentException("Body cannot be null or empty", nameof(body));
+
+        if (string.IsNullOrWhiteSpace(emailType))
+            throw new ArgumentException("Email type cannot be null or empty", nameof(emailType));
+
         // Create email log entry
         var emailLog = EmailLog.Create(to, subject, body, emailType);
 

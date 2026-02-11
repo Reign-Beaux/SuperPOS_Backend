@@ -3,7 +3,6 @@ using Domain.Entities.Users;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Application.UseCases.Users.DTOs;
-using Domain.Repositories;
 
 namespace Application.UseCases.Users.CQRS.Queries.GetById;
 
@@ -32,7 +31,9 @@ public sealed class UserGetByIdHandler : IRequestHandler<UserGetByIdQuery, Opera
         }
 
         // Load Role
-        user.Role = (await _unitOfWork.Repository<Role>().GetByIdAsync(user.RoleId, cancellationToken))!;
+        var role = await _unitOfWork.Repository<Role>().GetByIdAsync(user.RoleId, cancellationToken);
+        if (role != null)
+            user.Role = role;
 
         var userDto = _mapper.Map<UserDTO>(user);
 

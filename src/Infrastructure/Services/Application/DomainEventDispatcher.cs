@@ -44,7 +44,9 @@ public class DomainEventDispatcher : IDomainEventDispatcher
             {
                 try
                 {
-                    await (Task)handleMethod.Invoke(handlers, new object[] { domainEvent, cancellationToken })!;
+                    var result = handleMethod.Invoke(handlers, [domainEvent, cancellationToken]);
+                    if (result is Task task)
+                        await task;
                 }
                 catch (Exception ex)
                 {

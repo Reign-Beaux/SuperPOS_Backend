@@ -1,7 +1,6 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Domain.Entities.Sales;
-using Domain.Repositories;
 using Domain.Services;
 using Domain.ValueObjects;
 
@@ -73,7 +72,7 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, OperationRes
 
         if (!success)
         {
-            return Result.Error(ErrorResult.BadRequest, detail: errorMessage);
+            return Result.Error(ErrorResult.BadRequest, detail: errorMessage ?? "Error validating stock");
         }
 
         try
