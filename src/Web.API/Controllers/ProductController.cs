@@ -5,13 +5,16 @@ using Application.UseCases.Products.CQRS.Commands.Delete;
 using Application.UseCases.Products.CQRS.Queries.GetById;
 using Application.UseCases.Products.CQRS.Queries.GetAll;
 using Application.UseCases.Products.CQRS.Queries.Search;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize]
 public class ProductController(IMediator mediator) : BaseController
 {
     [HttpPost]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> Create([FromBody] CreateProductCommand command)
     {
         var result = await mediator.Send(command);
@@ -19,6 +22,7 @@ public class ProductController(IMediator mediator) : BaseController
     }
 
     [HttpGet]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> GetAll()
     {
         var result = await mediator.Send(new ProductGetAllQuery());
@@ -26,6 +30,7 @@ public class ProductController(IMediator mediator) : BaseController
     }
 
     [HttpGet("search")]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> Search([FromQuery] string term)
     {
         var query = new ProductSearchQuery(term);
@@ -34,6 +39,7 @@ public class ProductController(IMediator mediator) : BaseController
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> GetById(Guid id)
     {
         ProductGetByIdQuery request = new(id);
@@ -42,6 +48,7 @@ public class ProductController(IMediator mediator) : BaseController
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> Update(Guid id, [FromBody] ProductUpdateCommand command)
     {
         var result = await mediator.Send(command with { Id = id });
@@ -49,6 +56,7 @@ public class ProductController(IMediator mediator) : BaseController
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await mediator.Send(new ProductDeleteCommand(id));

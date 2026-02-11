@@ -17,6 +17,11 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
+
+        // Configure options
+        services.Configure<Application.Options.JwtSettings>(
+            configuration.GetSection(Application.Options.JwtSettings.SectionName));
+
         services
             .AddCaching()
             .AddPersistence(configuration)
@@ -45,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IReturnRepository, ReturnRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         // Register generic repository base for minor entities
         services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
@@ -55,6 +61,7 @@ public static class DependencyInjection
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped<IEncryptionService, EncryptionService>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         // Domain Event Dispatcher
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();

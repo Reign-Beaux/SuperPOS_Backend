@@ -5,13 +5,17 @@ using Application.UseCases.Users.CQRS.Commands.Delete;
 using Application.UseCases.Users.CQRS.Queries.GetById;
 using Application.UseCases.Users.CQRS.Queries.GetAll;
 using Application.UseCases.Users.CQRS.Queries.Search;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize]
 public class UserController(IMediator mediator) : BaseController
 {
     [HttpPost]
+    [AllowAnonymous] // TEMPORAL: Permitir crear el primer usuario admin sin autenticación
+    // [Authorize(Policy = "AdminOnly")] // DESCOMENTAR después de crear el usuario admin
     public async Task<IActionResult> Create([FromBody] CreateUserCommand command)
     {
         var result = await mediator.Send(command);
@@ -19,6 +23,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> GetById(Guid id)
     {
         UserGetByIdQuery request = new(id);
@@ -27,6 +32,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpGet]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> GetAll()
     {
         var result = await mediator.Send(new UserGetAllQuery());
@@ -34,6 +40,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpGet("search")]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> Search([FromQuery] string term)
     {
         var result = await mediator.Send(new UserSearchQuery(term));
@@ -41,6 +48,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UserUpdateCommand command)
     {
         if (id != command.Id)
@@ -51,6 +59,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await mediator.Send(new UserDeleteCommand(id));

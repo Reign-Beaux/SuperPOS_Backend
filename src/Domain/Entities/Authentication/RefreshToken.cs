@@ -4,7 +4,7 @@ namespace Domain.Entities.Authentication;
 /// Refresh token for JWT authentication.
 /// Allows users to obtain new access tokens without re-authenticating.
 /// </summary>
-public class RefreshToken : BaseEntity
+public class RefreshToken : BaseEntity, IAggregateRoot
 {
     // Parameterless constructor for EF Core
     public RefreshToken() { }

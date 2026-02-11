@@ -27,6 +27,15 @@ public class User : BaseEntity, IAggregateRoot
     public string? Phone { get; set; }
     public Guid RoleId { get; set; }
 
+    // Authentication and security fields
+    public bool IsActive { get; set; } = true;
+    public DateTime? LastLoginAt { get; set; }
+    public int FailedLoginAttempts { get; set; } = 0;
+    public DateTime? LockedUntilAt { get; set; }
+
+    // Computed property for account lockout status
+    public bool IsLocked => LockedUntilAt.HasValue && LockedUntilAt.Value > DateTime.UtcNow;
+
     // Value Object properties for domain logic
     public PersonName NameValue
     {
@@ -148,7 +157,10 @@ public class User : BaseEntity, IAggregateRoot
 
     /// <summary>
     /// Verifies if the provided hashed password matches the user's password.
+    /// OBSOLETE: Use IEncryptionService.VerifyText() instead for proper BCrypt verification.
+    /// This method uses simple string comparison and should not be used for authentication.
     /// </summary>
+    [Obsolete("Use IEncryptionService.VerifyText() for proper BCrypt password verification")]
     public bool VerifyPassword(string hashedPassword)
     {
         return PasswordHashed == hashedPassword;
@@ -181,6 +193,70 @@ public class User : BaseEntity, IAggregateRoot
             return; // No change needed
 
         RoleId = roleId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // Authentication and account management methods
+
+    /// <summary>
+    /// Records a successful login attempt.
+    /// Resets failed login attempts and updates last login timestamp.
+    /// </summary>
+    public void RecordSuccessfulLogin()
+    {
+        LastLoginAt = DateTime.UtcNow;
+        FailedLoginAttempts = 0;
+        LockedUntilAt = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Records a failed login attempt.
+    /// Locks the account if max attempts is reached.
+    /// </summary>
+    /// <param name="maxAttempts">Maximum failed attempts before lockout (default: 5)</param>
+    /// <param name="lockoutMinutes">Duration of lockout in minutes (default: 30)</param>
+    public void RecordFailedLogin(int maxAttempts = 5, int lockoutMinutes = 30)
+    {
+        FailedLoginAttempts++;
+        UpdatedAt = DateTime.UtcNow;
+
+        if (FailedLoginAttempts >= maxAttempts)
+        {
+            LockedUntilAt = DateTime.UtcNow.AddMinutes(lockoutMinutes);
+        }
+    }
+
+    /// <summary>
+    /// Manually unlocks a locked account.
+    /// Resets failed login attempts and clears lockout timestamp.
+    /// </summary>
+    public void Unlock()
+    {
+        LockedUntilAt = null;
+        FailedLoginAttempts = 0;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Deactivates the user account.
+    /// Prevents login without deleting the account.
+    /// </summary>
+    public void Deactivate()
+    {
+        IsActive = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Activates a deactivated user account.
+    /// Resets lockout and failed attempts.
+    /// </summary>
+    public void Activate()
+    {
+        IsActive = true;
+        FailedLoginAttempts = 0;
+        LockedUntilAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 }

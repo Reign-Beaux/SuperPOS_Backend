@@ -32,4 +32,16 @@ public static class UserMessages
     {
         public static string WithEmail(string? value) => string.Format("Ya existe un usuario con el email '{0}'.", value ?? "desconocido");
     }
+
+    public static class Authentication
+    {
+        public const string InvalidCredentials = "Credenciales inválidas. Verifica tu email y contraseña.";
+        public const string AccountLocked = "Tu cuenta ha sido bloqueada por múltiples intentos fallidos. Intenta nuevamente en {0} minutos.";
+        public const string AccountInactive = "Tu cuenta está inactiva. Contacta al administrador.";
+        public const string LoginSuccess = "Inicio de sesión exitoso.";
+        public const string LogoutSuccess = "Sesión cerrada correctamente.";
+        public const string RefreshTokenInvalid = "Token de actualización inválido o expirado.";
+        public const string RefreshTokenRevoked = "El token de actualización ha sido revocado.";
+        public const string UnauthorizedAccess = "No tienes permisos para realizar esta acción.";
+    }
 }

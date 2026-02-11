@@ -50,6 +50,7 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors(cors);
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

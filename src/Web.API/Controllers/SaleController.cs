@@ -4,11 +4,13 @@ using Application.UseCases.Sales.CQRS.Commands.Cancel;
 using Application.UseCases.Sales.CQRS.Commands.Create;
 using Application.UseCases.Sales.CQRS.Queries.GetAll;
 using Application.UseCases.Sales.CQRS.Queries.GetById;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize]
 public class SaleController : BaseController
 {
     private readonly IMediator _mediator;
@@ -21,6 +23,7 @@ public class SaleController : BaseController
     }
 
     [HttpPost]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> Create([FromBody] CreateSaleCommand command)
     {
         var result = await _mediator.Send(command);
@@ -28,6 +31,7 @@ public class SaleController : BaseController
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new SaleGetByIdQuery(id);
@@ -36,6 +40,7 @@ public class SaleController : BaseController
     }
 
     [HttpGet]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> GetAll()
     {
         var query = new SaleGetAllQuery();
@@ -49,6 +54,7 @@ public class SaleController : BaseController
     /// <param name="id">Sale ID</param>
     /// <returns>PDF file</returns>
     [HttpGet("{id:guid}/ticket")]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> GetTicket(Guid id)
     {
         try
@@ -74,6 +80,7 @@ public class SaleController : BaseController
     /// <param name="request">Cancellation request with user ID and reason</param>
     /// <returns>Result of cancellation</returns>
     [HttpPost("{id:guid}/cancel")]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> CancelSale(Guid id, [FromBody] CancelSaleRequest request)
     {
         var command = new CancelSaleCommand(id, request.UserId, request.Reason);
