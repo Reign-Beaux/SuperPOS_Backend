@@ -6,7 +6,6 @@ using Application.UseCases.Returns.CQRS.Queries.GetAll;
 using Application.UseCases.Returns.CQRS.Queries.GetById;
 using Application.UseCases.Returns.CQRS.Queries.GetByStatus;
 using Domain.Entities.Returns;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Web.API.Controllers;
 

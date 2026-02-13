@@ -5,7 +5,6 @@ using Application.UseCases.Sales.CQRS.Commands.Create;
 using Application.UseCases.Sales.CQRS.Queries.GetAll;
 using Application.UseCases.Sales.CQRS.Queries.GetById;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Web.API.Controllers;
 

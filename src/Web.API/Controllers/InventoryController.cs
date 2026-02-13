@@ -2,7 +2,6 @@ using Application.DesignPatterns.Mediators.Interfaces;
 using Application.UseCases.Inventories.CQRS.Commands.AdjustStock;
 using Application.UseCases.Inventories.CQRS.Queries.GetAll;
 using Application.UseCases.Inventories.CQRS.Queries.GetByProductId;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Web.API.Controllers;
 
