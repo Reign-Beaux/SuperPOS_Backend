@@ -92,12 +92,15 @@ public class LoginHandler(
         var userDto = mapper.Map<UserDTO>(user);
 
         // 12. Retornar respuesta
-        var response = new LoginResponseDTO(
-            accessToken,
-            refreshTokenString,
-            DateTime.UtcNow.AddMinutes(jwtSettings.Value.AccessTokenExpirationMinutes),
-            refreshToken.ExpiresAt,
-            userDto);
+        var response = new LoginResponseDTO
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshTokenString,
+            ExpiresIn = jwtSettings.Value.AccessTokenExpirationMinutes * 60, // ExpiresIn en segundos
+            AccessTokenExpiresAt = DateTime.UtcNow.AddMinutes(jwtSettings.Value.AccessTokenExpirationMinutes),
+            RefreshTokenExpiresAt = refreshToken.ExpiresAt,
+            User = userDto
+        };
 
         return Result.Success(response);
     }

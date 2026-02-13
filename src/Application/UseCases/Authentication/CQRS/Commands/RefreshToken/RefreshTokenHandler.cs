@@ -54,7 +54,12 @@ public class RefreshTokenHandler(
         var expiresAt = DateTime.UtcNow.AddMinutes(jwtSettings.Value.AccessTokenExpirationMinutes);
 
         // 6. Retornar respuesta
-        var response = new RefreshTokenResponseDTO(accessToken, expiresAt);
+        var response = new RefreshTokenResponseDTO
+        {
+            AccessToken = accessToken,
+            ExpiresIn = jwtSettings.Value.AccessTokenExpirationMinutes * 60, // ExpiresIn en segundos
+            AccessTokenExpiresAt = expiresAt
+        };
 
         return Result.Success(response);
     }
