@@ -18,7 +18,7 @@ public abstract class BaseController : ControllerBase
             StatusResult.Created when actionName is not null && result.Value is not null =>
                 CreatedAtAction(
                     actionName,
-                    new { id = result.Value.GetType().GetProperty("Id")?.GetValue(result.Value) },
+                    new { id = result.Value },  // result.Value is already a Guid
                     result.Value),
 
             StatusResult.Exists

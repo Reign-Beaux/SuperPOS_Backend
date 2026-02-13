@@ -6,10 +6,12 @@ using Application.UseCases.Returns.CQRS.Queries.GetAll;
 using Application.UseCases.Returns.CQRS.Queries.GetById;
 using Application.UseCases.Returns.CQRS.Queries.GetByStatus;
 using Domain.Entities.Returns;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize(Policy = "ManagementOnly")] // Gerente y Admin - NO Vendedor
 public class ReturnController : BaseController
 {
     private readonly IMediator _mediator;

@@ -22,7 +22,7 @@ public class SaleController : BaseController
     }
 
     [HttpPost]
-    [Authorize(Policy = "SellerOrAbove")]
+    [Authorize(Policy = "POSOnly")] // Vendedor y Admin
     public async Task<IActionResult> Create([FromBody] CreateSaleCommand command)
     {
         var result = await _mediator.Send(command);
@@ -30,7 +30,7 @@ public class SaleController : BaseController
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Policy = "SellerOrAbove")]
+    [Authorize(Policy = "POSOnly")] // Vendedor y Admin
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new SaleGetByIdQuery(id);
@@ -39,7 +39,7 @@ public class SaleController : BaseController
     }
 
     [HttpGet]
-    [Authorize(Policy = "ManagerOrAbove")]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin (reportes)
     public async Task<IActionResult> GetAll()
     {
         var query = new SaleGetAllQuery();
@@ -53,7 +53,7 @@ public class SaleController : BaseController
     /// <param name="id">Sale ID</param>
     /// <returns>PDF file</returns>
     [HttpGet("{id:guid}/ticket")]
-    [Authorize(Policy = "SellerOrAbove")]
+    [Authorize(Policy = "POSOnly")] // Vendedor y Admin
     public async Task<IActionResult> GetTicket(Guid id)
     {
         try
@@ -79,7 +79,7 @@ public class SaleController : BaseController
     /// <param name="request">Cancellation request with user ID and reason</param>
     /// <returns>Result of cancellation</returns>
     [HttpPost("{id:guid}/cancel")]
-    [Authorize(Policy = "ManagerOrAbove")]
+    [Authorize(Policy = "AdminOnly")] // Solo Admin puede cancelar ventas
     public async Task<IActionResult> CancelSale(Guid id, [FromBody] CancelSaleRequest request)
     {
         var command = new CancelSaleCommand(id, request.UserId, request.Reason);

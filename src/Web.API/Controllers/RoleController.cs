@@ -4,10 +4,12 @@ using Application.UseCases.Roles.CQRS.Commands.Update;
 using Application.UseCases.Roles.CQRS.Commands.Delete;
 using Application.UseCases.Roles.CQRS.Queries.GetById;
 using Application.UseCases.Roles.CQRS.Queries.GetAll;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize(Policy = "AdminOnly")] // Solo Admin puede gestionar roles
 public class RoleController(IMediator mediator) : BaseController
 {
     [HttpPost]

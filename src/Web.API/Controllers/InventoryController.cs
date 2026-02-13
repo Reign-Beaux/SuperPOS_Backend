@@ -2,10 +2,12 @@ using Application.DesignPatterns.Mediators.Interfaces;
 using Application.UseCases.Inventories.CQRS.Commands.AdjustStock;
 using Application.UseCases.Inventories.CQRS.Queries.GetAll;
 using Application.UseCases.Inventories.CQRS.Queries.GetByProductId;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize]
 public class InventoryController : BaseController
 {
     private readonly IMediator _mediator;
@@ -16,6 +18,7 @@ public class InventoryController : BaseController
     }
 
     [HttpPost("adjust")]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> AdjustStock([FromBody] InventoryAdjustStockCommand command)
     {
         var result = await _mediator.Send(command);
@@ -23,6 +26,7 @@ public class InventoryController : BaseController
     }
 
     [HttpGet("product/{productId:guid}")]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> GetByProductId(Guid productId)
     {
         var query = new InventoryGetByProductIdQuery(productId);
@@ -31,6 +35,7 @@ public class InventoryController : BaseController
     }
 
     [HttpGet]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> GetAll()
     {
         var query = new InventoryGetAllQuery();

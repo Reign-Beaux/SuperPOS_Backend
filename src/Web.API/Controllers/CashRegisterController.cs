@@ -3,10 +3,12 @@ using Application.Interfaces.Services;
 using Application.UseCases.CashRegisters.CQRS.Commands.Create;
 using Application.UseCases.CashRegisters.CQRS.Queries.GetAll;
 using Application.UseCases.CashRegisters.CQRS.Queries.GetById;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize(Policy = "ManagementOnly")] // Gerente y Admin - NO Vendedor
 public class CashRegisterController : BaseController
 {
     private readonly IMediator _mediator;

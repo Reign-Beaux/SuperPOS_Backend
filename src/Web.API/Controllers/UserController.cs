@@ -23,7 +23,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpGet("{id}")]
-    [Authorize(Policy = "ManagerOrAbove")]
+    [Authorize(Policy = "ManagementOnly")]
     public async Task<IActionResult> GetById(Guid id)
     {
         UserGetByIdQuery request = new(id);
@@ -32,7 +32,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpGet]
-    [Authorize(Policy = "ManagerOrAbove")]
+    [Authorize(Policy = "ManagementOnly")]
     public async Task<IActionResult> GetAll()
     {
         var result = await mediator.Send(new UserGetAllQuery());
@@ -40,7 +40,7 @@ public class UserController(IMediator mediator) : BaseController
     }
 
     [HttpGet("search")]
-    [Authorize(Policy = "ManagerOrAbove")]
+    [Authorize(Policy = "ManagementOnly")]
     public async Task<IActionResult> Search([FromQuery] string term)
     {
         var result = await mediator.Send(new UserSearchQuery(term));

@@ -5,13 +5,16 @@ using Application.UseCases.Customers.CQRS.Commands.Delete;
 using Application.UseCases.Customers.CQRS.Queries.GetById;
 using Application.UseCases.Customers.CQRS.Queries.GetAll;
 using Application.UseCases.Customers.CQRS.Queries.Search;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Web.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize]
 public class CustomerController(IMediator mediator) : BaseController
 {
     [HttpPost]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> Create([FromBody] CreateCustomerCommand command)
     {
         var result = await mediator.Send(command);
@@ -19,6 +22,7 @@ public class CustomerController(IMediator mediator) : BaseController
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> GetById(Guid id)
     {
         CustomerGetByIdQuery request = new(id);
@@ -27,6 +31,7 @@ public class CustomerController(IMediator mediator) : BaseController
     }
 
     [HttpGet]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> GetAll()
     {
         var result = await mediator.Send(new CustomerGetAllQuery());
@@ -34,6 +39,7 @@ public class CustomerController(IMediator mediator) : BaseController
     }
 
     [HttpGet("search")]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> Search([FromQuery] string term)
     {
         var result = await mediator.Send(new CustomerSearchQuery(term));
@@ -41,6 +47,7 @@ public class CustomerController(IMediator mediator) : BaseController
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
     public async Task<IActionResult> Update(Guid id, [FromBody] CustomerUpdateCommand command)
     {
         if (id != command.Id)
@@ -51,6 +58,7 @@ public class CustomerController(IMediator mediator) : BaseController
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "AdminOnly")] // Solo Admin
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await mediator.Send(new CustomerDeleteCommand(id));

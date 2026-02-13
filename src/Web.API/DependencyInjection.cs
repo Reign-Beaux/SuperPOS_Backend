@@ -62,12 +62,17 @@ public static class DependencyInjection
 
         services.AddAuthorization(options =>
         {
+            // Admin tiene acceso total
             options.AddPolicy("AdminOnly", policy =>
                 policy.RequireRole("Administrador"));
-            options.AddPolicy("ManagerOrAbove", policy =>
+
+            // Gestión: Solo Gerente y Admin (NO Vendedor)
+            options.AddPolicy("ManagementOnly", policy =>
                 policy.RequireRole("Administrador", "Gerente"));
-            options.AddPolicy("SellerOrAbove", policy =>
-                policy.RequireRole("Administrador", "Gerente", "Vendedor"));
+
+            // POS: Solo Vendedor y Admin (NO Gerente)
+            options.AddPolicy("POSOnly", policy =>
+                policy.RequireRole("Administrador", "Vendedor"));
         });
 
         return services;
