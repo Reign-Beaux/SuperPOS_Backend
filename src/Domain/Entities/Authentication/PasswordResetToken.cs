@@ -6,7 +6,7 @@ namespace Domain.Entities.Authentication;
 /// Password reset token for account recovery.
 /// Contains temporary verification codes sent via email or WhatsApp.
 /// </summary>
-public class PasswordResetToken : BaseEntity
+public class PasswordResetToken : BaseEntity, IAggregateRoot
 {
     private const int MaxAttempts = 3;
     private const int ExpirationMinutes = 15;

@@ -24,4 +24,21 @@ public interface IEmailService
         string body,
         string emailType,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a password reset code email to the user.
+    /// </summary>
+    Task<bool> SendPasswordResetCodeAsync(
+        string recipientEmail,
+        string userName,
+        string code,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a password changed notification email to the user.
+    /// </summary>
+    Task<bool> SendPasswordChangedNotificationAsync(
+        string recipientEmail,
+        string userName,
+        CancellationToken cancellationToken = default);
 }

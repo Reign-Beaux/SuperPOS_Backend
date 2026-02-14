@@ -19,6 +19,7 @@ public interface IUnitOfWork : IDisposable
     ICashRegisterRepository CashRegisters { get; }
     IReturnRepository Returns { get; }
     IRefreshTokenRepository RefreshTokens { get; }
+    IPasswordResetTokenRepository PasswordResetTokens { get; }
 
     /// <summary>
     /// Generic repository accessor for aggregate roots that don't need specialized operations.

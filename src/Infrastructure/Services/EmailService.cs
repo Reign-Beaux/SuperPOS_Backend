@@ -38,6 +38,44 @@ public class EmailService : IEmailService
         return await SendEmailAsync(recipientEmail, subject, body, "StockAlert", cancellationToken);
     }
 
+    public async Task<bool> SendPasswordResetCodeAsync(
+        string recipientEmail,
+        string userName,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+            throw new ArgumentException("Recipient email cannot be null or empty", nameof(recipientEmail));
+
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new ArgumentException("User name cannot be null or empty", nameof(userName));
+
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ArgumentException("Reset code cannot be null or empty", nameof(code));
+
+        var subject = "🔐 Código de Recuperación de Contraseña - SuperPOS";
+        var body = BuildPasswordResetEmailBody(userName, code);
+
+        return await SendEmailAsync(recipientEmail, subject, body, "PasswordReset", cancellationToken);
+    }
+
+    public async Task<bool> SendPasswordChangedNotificationAsync(
+        string recipientEmail,
+        string userName,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+            throw new ArgumentException("Recipient email cannot be null or empty", nameof(recipientEmail));
+
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new ArgumentException("User name cannot be null or empty", nameof(userName));
+
+        var subject = "✅ Contraseña Cambiada - SuperPOS";
+        var body = BuildPasswordChangedEmailBody(userName);
+
+        return await SendEmailAsync(recipientEmail, subject, body, "PasswordChanged", cancellationToken);
+    }
+
     public async Task<bool> SendEmailAsync(
         string to,
         string subject,
@@ -149,6 +187,104 @@ public class EmailService : IEmailService
             </div>
             <p>Por favor, considere realizar un pedido de reabastecimiento lo antes posible para evitar quiebre de stock.</p>
             <p>Este es un mensaje automático del sistema SuperPOS.</p>
+        </div>
+        <div class='footer'>
+            <p>SuperPOS - Sistema de Punto de Venta</p>
+            <p>Este es un correo automático, por favor no responder.</p>
+        </div>
+    </div>
+</body>
+</html>
+";
+    }
+
+    private string BuildPasswordResetEmailBody(string userName, string code)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+        .content {{ background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }}
+        .code-box {{ background-color: white; border: 2px dashed #4CAF50; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px; }}
+        .code {{ font-size: 36px; font-weight: bold; color: #4CAF50; letter-spacing: 8px; font-family: monospace; }}
+        .info {{ background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; }}
+        .warning {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+        .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>🔐 Recuperación de Contraseña</h1>
+        </div>
+        <div class='content'>
+            <p>Hola <strong>{userName}</strong>,</p>
+            <p>Hemos recibido una solicitud para restablecer tu contraseña en SuperPOS. Utiliza el siguiente código de verificación:</p>
+            <div class='code-box'>
+                <div class='code'>{code}</div>
+            </div>
+            <div class='info'>
+                <strong>Información importante:</strong>
+                <ul style='margin: 10px 0; padding-left: 20px;'>
+                    <li>Este código es válido por <strong>15 minutos</strong></li>
+                    <li>Solo puedes intentar validarlo <strong>3 veces</strong></li>
+                    <li>Este código es de un solo uso</li>
+                </ul>
+            </div>
+            <div class='warning'>
+                <strong>¿No solicitaste este cambio?</strong><br>
+                Si no realizaste esta solicitud, puedes ignorar este correo de forma segura. Tu contraseña no será cambiada sin el código de verificación.
+            </div>
+        </div>
+        <div class='footer'>
+            <p>SuperPOS - Sistema de Punto de Venta</p>
+            <p>Este es un correo automático, por favor no responder.</p>
+        </div>
+    </div>
+</body>
+</html>
+";
+    }
+
+    private string BuildPasswordChangedEmailBody(string userName)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+        .content {{ background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }}
+        .success {{ background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; }}
+        .warning {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+        .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+        .icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>✅ Contraseña Cambiada</h1>
+        </div>
+        <div class='content'>
+            <div class='icon'>🎉</div>
+            <p>Hola <strong>{userName}</strong>,</p>
+            <div class='success'>
+                <strong>¡Tu contraseña ha sido cambiada exitosamente!</strong><br>
+                A partir de ahora, deberás usar tu nueva contraseña para iniciar sesión en SuperPOS.
+            </div>
+            <p>Por seguridad, todas las sesiones activas en otros dispositivos han sido cerradas automáticamente. Deberás iniciar sesión nuevamente en cada dispositivo.</p>
+            <p><strong>Fecha del cambio:</strong> {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC</p>
+            <div class='warning'>
+                <strong>¿No realizaste este cambio?</strong><br>
+                Si no cambiaste tu contraseña, tu cuenta puede estar comprometida. Contacta inmediatamente al administrador del sistema.
+            </div>
         </div>
         <div class='footer'>
             <p>SuperPOS - Sistema de Punto de Venta</p>

@@ -30,6 +30,7 @@ public class UnitOfWork : IUnitOfWork
     private ICashRegisterRepository? _cashRegisters;
     private IReturnRepository? _returns;
     private IRefreshTokenRepository? _refreshTokens;
+    private IPasswordResetTokenRepository? _passwordResetTokens;
 
     public UnitOfWork(SuperPOSDbContext context, IDomainEventDispatcher eventDispatcher)
     {
@@ -47,6 +48,7 @@ public class UnitOfWork : IUnitOfWork
     public ICashRegisterRepository CashRegisters => _cashRegisters ??= new CashRegisterRepository(_context);
     public IReturnRepository Returns => _returns ??= new ReturnRepository(_context);
     public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
+    public IPasswordResetTokenRepository PasswordResetTokens => _passwordResetTokens ??= new PasswordResetTokenRepository(_context);
 
     /// <summary>
     /// Generic repository accessor for aggregate roots that don't need specialized operations.

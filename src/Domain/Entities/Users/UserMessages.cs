@@ -44,4 +44,19 @@ public static class UserMessages
         public const string RefreshTokenRevoked = "El token de actualización ha sido revocado.";
         public const string UnauthorizedAccess = "No tienes permisos para realizar esta acción.";
     }
+
+    public static class PasswordReset
+    {
+        public const string CodeSentSuccess = "Se ha enviado un código de verificación a tu correo electrónico.";
+        public const string CodeSentFailed = "No se pudo enviar el código de verificación. Intenta nuevamente más tarde.";
+        public const string CodeVerifiedSuccess = "Código verificado correctamente.";
+        public const string CodeInvalid = "El código ingresado es incorrecto.";
+        public const string CodeExpired = "El código de verificación ha expirado. Solicita uno nuevo.";
+        public const string MaxAttemptsReached = "Has excedido el número máximo de intentos. Solicita un nuevo código.";
+        public const string TokenNotFound = "No se encontró un código de verificación válido.";
+        public const string TokenAlreadyUsed = "Este código ya ha sido utilizado. Solicita uno nuevo.";
+        public const string ResetSuccess = "Tu contraseña ha sido cambiada correctamente.";
+        public const string ResetFailed = "No se pudo cambiar tu contraseña. Intenta nuevamente.";
+        public const string EmailNotFound = "No se encontró una cuenta con este correo electrónico.";
+    }
 }

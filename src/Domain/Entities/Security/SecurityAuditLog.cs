@@ -63,4 +63,8 @@ public static class SecurityAuditEventTypes
     public const string UserUpdated = "UserUpdated";
     public const string UserDeleted = "UserDeleted";
     public const string UnauthorizedAccess = "UnauthorizedAccess";
+    public const string PasswordResetRequested = "PasswordResetRequested";
+    public const string PasswordResetCodeVerified = "PasswordResetCodeVerified";
+    public const string PasswordResetCodeInvalid = "PasswordResetCodeInvalid";
+    public const string PasswordResetCompleted = "PasswordResetCompleted";
 }
