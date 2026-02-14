@@ -158,12 +158,13 @@ using Domain.Entities.{Entity};                         // Entity classes
    - **UnitOfWork specific repositories** (preferred over generic):
      - `_unitOfWork.Products` - IProductRepository (with SearchByNameAsync, ExistsByBarcodeAsync, etc.)
      - `_unitOfWork.Customers` - ICustomerRepository (with SearchByNameAsync)
-     - `_unitOfWork.Users` - IUserRepository (with SearchByNameAsync)
+     - `_unitOfWork.Users` - IUserRepository (with SearchByNameAsync, GetByEmailAsync, GetByEmailWithRoleAsync)
      - `_unitOfWork.Sales` - ISaleRepository (with GetByDateRangeAsync, GetByIdWithDetailsAsync, etc.)
      - `_unitOfWork.Inventories` - IInventoryRepository (with GetByProductIdAsync, GetLowStockItemsAsync)
      - `_unitOfWork.Returns` - IReturnRepository (with GetByStatusAsync, GetBySaleIdAsync, etc.)
      - `_unitOfWork.CashRegisters` - ICashRegisterRepository (with GetByIdWithDetailsAsync)
      - `_unitOfWork.Roles` - IRoleRepository
+     - `_unitOfWork.RefreshTokens` - IRefreshTokenRepository (with GetActiveTokenAsync, RevokeAllUserTokensAsync, etc.)
    - Generic access: `_unitOfWork.Repository<EntityType>()`
    - **Note:** Base repository does NOT support eager loading. However, specific repositories (like ISaleRepository) have custom methods with eager loading (e.g., `GetByIdWithDetailsAsync()`)
 
@@ -265,6 +266,14 @@ public async Task SendEmailAsync(string recipientEmail, ...)
   "CorsSettings": {
     "Origins": ["http://localhost:3000"]
   },
+  "JwtSettings": {
+    "SecretKey": "configure-via-user-secrets-min-32-chars",
+    "Issuer": "SuperPOS.API",
+    "Audience": "SuperPOS.Client",
+    "AccessTokenExpirationMinutes": 30,
+    "RefreshTokenExpirationDays": 30,
+    "ClockSkewMinutes": 5
+  },
   "EmailSettings": {
     "SmtpServer": "smtp.gmail.com",
     "SmtpPort": 587,
@@ -289,16 +298,19 @@ public async Task SendEmailAsync(string recipientEmail, ...)
 ```
 
 **Notes:**
+- `JwtSettings`: Required for JWT authentication. SecretKey must be configured via User Secrets (min 32 characters)
 - `EmailSettings`: Required for low stock alert emails (uses MailKit/SMTP)
 - `StockSettings.LowStockThreshold`: Triggers email alerts when stock ≤ this value (default: 10)
 - `BusinessInfo`: Required for PDF ticket generation (business details on tickets and reports)
 
 ### User Secrets
 - User secrets ID: `7758d9ef-4f1e-495a-9803-32babd135164`
-- Store sensitive data (connection strings, API keys) using:
+- Store sensitive data (connection strings, API keys, JWT secret) using:
   ```bash
   dotnet user-secrets set "ConnectionStrings:SuperPOS" "your-connection-string"
+  dotnet user-secrets set "JwtSettings:SecretKey" "your-secret-key-min-32-chars"
   ```
+- **Important:** JWT SecretKey must be at least 32 characters for HS256 algorithm
 
 ### Environment Variables
 All configuration can be overridden via environment variables using the format:
@@ -318,6 +330,8 @@ All configuration can be overridden via environment variables using the format:
 - **QuestPDF 2025.12.4** - PDF generation (tickets and reports)
   - Uses Community License (free for non-commercial use)
   - For production commercial use, acquire appropriate license
+- **System.IdentityModel.Tokens.Jwt 8.15.0** - JWT token generation and validation
+- **Microsoft.AspNetCore.Authentication.JwtBearer 10.0.3** - JWT authentication middleware
 
 ## Dependency Injection
 
@@ -328,6 +342,10 @@ Each layer registers its services via extension methods:
 - OpenAPI documentation
 - JSON serialization (with support for Value Object converters)
 - `GlobalExceptionHandlingMiddleware` (handles unhandled exceptions, returns ProblemDetails)
+- JWT Authentication and Authorization:
+  - JWT Bearer authentication scheme
+  - Token validation parameters (issuer, audience, signing key, lifetime)
+  - Authorization policies: `AdminOnly`, `ManagerOrAbove`, `SellerOrAbove`
 
 ### Application Layer - `AddApplication()`
 - Custom Mediator with all handlers from assembly
@@ -337,7 +355,7 @@ Each layer registers its services via extension methods:
 
 ### Infrastructure Layer - `AddInfrastructure()`
 - DbContext (`SuperPOSDbContext`) with SQL Server
-- `IUnitOfWork` and all repository implementations (Products, Customers, Users, Sales, Inventories, CashRegisters, Returns, Roles, EmailLogs)
+- `IUnitOfWork` and all repository implementations (Products, Customers, Users, Sales, Inventories, CashRegisters, Returns, Roles, EmailLogs, RefreshTokens)
 - Domain services implementations:
   - `IProductUniquenessChecker`, `ICustomerUniquenessChecker`, `IUserUniquenessChecker`
   - `ISaleValidationService` (validates customer/user existence)
@@ -345,12 +363,15 @@ Each layer registers its services via extension methods:
 - Application services:
   - `IEmailService` (MailKit email notifications with HTML templates)
   - `ITicketService` (QuestPDF ticket and report generation)
-- `IEncryptionService` (password hashing)
+  - `IJwtTokenService` (JWT token generation, validation, and user ID extraction)
+- `IEncryptionService` (password hashing with BCrypt)
 - `IDomainEventDispatcher` (dispatches domain events to handlers)
 - Event handlers:
   - `LowStockEventHandler` (sends email alerts)
   - `SaleCancelledEventHandler` (restores inventory)
   - `ReturnApprovedEventHandler` (restores inventory)
+- Configuration options:
+  - `JwtSettings` - JWT configuration (SecretKey, Issuer, Audience, token expiration)
 - Caching (placeholder for future implementation)
 
 ## Mapster Configuration
@@ -528,13 +549,186 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
   - `GenerateCashRegisterReportAsync()` - Generates cash register reports with financial summary, statistics, and sales detail
   - Configuration via `BusinessInfo` in appsettings.json
 
+- **IJwtTokenService** - JWT token management
+  - `GenerateAccessToken()` - Generates JWT access token with user claims (userId, email, role, roleId)
+  - `GenerateRefreshToken()` - Generates cryptographically secure random refresh token (64 bytes, base64)
+  - `ValidateToken()` - Validates JWT token and returns ClaimsPrincipal
+  - `GetUserIdFromToken()` - Extracts user ID from token
+  - Configuration via `JwtSettings` in appsettings.json
+  - Token expiration: Access Token (30 min default), Refresh Token (30 days default)
+
+## Authentication & Authorization
+
+### JWT Authentication System
+
+**Status**: ✅ Fully Implemented (2026-02-11)
+
+**Architecture**:
+- Access Token (JWT): Short-lived token (30 min default) for API authentication
+- Refresh Token: Long-lived token (30 days default) for obtaining new access tokens
+- Token storage: Refresh tokens stored in database with revocation support
+- Password hashing: BCrypt via `IEncryptionService`
+
+**Endpoints**:
+- `POST /api/auth/login` - Authenticate with email/password
+  - Request: `{ "email": "user@example.com", "password": "..." }`
+  - Response: `{ "accessToken": "...", "refreshToken": "...", "accessTokenExpiresAt": "...", "user": {...} }`
+  - Account lockout: 5 failed attempts → 30 minutes lockout
+- `POST /api/auth/refresh` - Renew access token
+  - Request: `{ "refreshToken": "..." }`
+  - Response: `{ "accessToken": "...", "accessTokenExpiresAt": "..." }`
+- `POST /api/auth/logout` - Revoke refresh token
+  - Request: `{ "refreshToken": "..." }`
+  - Response: Success message
+
+**JWT Claims**:
+- `sub` - User ID (Guid)
+- `email` - User email
+- `jti` - JWT ID (unique)
+- `ClaimTypes.NameIdentifier` - User ID
+- `ClaimTypes.Email` - Email
+- `ClaimTypes.Role` - Role name (for authorization policies)
+- `roleId` - Role ID (Guid)
+
+**Security Features**:
+- Account lockout after 5 failed attempts (30 minutes)
+- Active/inactive account management (`IsActive` property)
+- Login tracking (`LastLoginAt`, `FailedLoginAttempts`)
+- Token revocation support
+- HMAC-SHA256 signature validation
+- Issuer and audience validation
+- Clock skew tolerance (5 minutes default)
+
+**User Entity Enhancements**:
+```csharp
+public bool IsActive { get; set; }              // Active/inactive flag
+public DateTime? LastLoginAt { get; set; }      // Last successful login
+public int FailedLoginAttempts { get; set; }    // Failed login counter
+public DateTime? LockedUntilAt { get; set; }    // Lockout expiration
+public bool IsLocked { get; }                   // Computed property
+
+// Domain methods
+public void RecordSuccessfulLogin()             // Reset failed attempts, update last login
+public void RecordFailedLogin()                 // Increment counter, lock if >= 5 attempts
+public void Unlock()                            // Remove lockout
+public void Activate() / Deactivate()           // Toggle account status
+```
+
+**Configuration** (`appsettings.json`):
+```json
+{
+  "JwtSettings": {
+    "SecretKey": "configure-via-user-secrets-min-32-chars",
+    "Issuer": "SuperPOS.API",
+    "Audience": "SuperPOS.Client",
+    "AccessTokenExpirationMinutes": 30,
+    "RefreshTokenExpirationDays": 30,
+    "ClockSkewMinutes": 5
+  }
+}
+```
+
+**Important**: SecretKey must be configured via User Secrets (min 32 characters for HS256).
+
+### Role-Based Access Control (RBAC)
+
+**Status**: ✅ Fully Implemented (2026-02-11)
+
+**Available Roles**:
+1. **Administrador** (Admin) - Full system access
+2. **Gerente** (Manager) - Sales, inventory, reports, user management (read)
+3. **Vendedor** (Seller) - Sales and basic queries only
+
+**Authorization Policies**:
+- `AdminOnly` - Requires "Administrador" role
+- `ManagerOrAbove` - Requires "Administrador" or "Gerente"
+- `SellerOrAbove` - Requires "Administrador", "Gerente", or "Vendedor"
+
+**Protected Endpoints**:
+
+All controllers are protected with `[Authorize]` attribute. Specific policies per endpoint:
+
+**AuthController** (`/api/auth`):
+- `POST /login` - [AllowAnonymous]
+- `POST /refresh` - [AllowAnonymous]
+- `POST /logout` - [AllowAnonymous]
+
+**UserController** (`/api/user`):
+- `POST` - [AllowAnonymous] (temporary, for creating first admin)
+- `GET /{id}` - [Authorize(Policy = "ManagerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
+- `GET /search` - [Authorize(Policy = "ManagerOrAbove")]
+- `PUT /{id}` - [Authorize(Policy = "AdminOnly")]
+- `DELETE /{id}` - [Authorize(Policy = "AdminOnly")]
+
+**ProductController** (`/api/product`):
+- `POST` - [Authorize(Policy = "ManagerOrAbove")]
+- `GET /{id}` - [Authorize(Policy = "SellerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "SellerOrAbove")]
+- `GET /search/name` - [Authorize(Policy = "SellerOrAbove")]
+- `GET /search/barcode` - [Authorize(Policy = "SellerOrAbove")]
+- `PUT /{id}` - [Authorize(Policy = "ManagerOrAbove")]
+- `DELETE /{id}` - [Authorize(Policy = "AdminOnly")]
+
+**CustomerController** (`/api/customer`):
+- `POST` - [Authorize(Policy = "SellerOrAbove")]
+- `GET /{id}` - [Authorize(Policy = "SellerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "SellerOrAbove")]
+- `GET /search` - [Authorize(Policy = "SellerOrAbove")]
+- `PUT /{id}` - [Authorize(Policy = "ManagerOrAbove")]
+- `DELETE /{id}` - [Authorize(Policy = "AdminOnly")]
+
+**SaleController** (`/api/sale`):
+- `POST` - [Authorize(Policy = "SellerOrAbove")]
+- `GET /{id}` - [Authorize(Policy = "SellerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
+- `GET /{id}/ticket` - [Authorize(Policy = "SellerOrAbove")]
+- `POST /{id}/cancel` - [Authorize(Policy = "ManagerOrAbove")]
+
+**InventoryController** (`/api/inventory`):
+- `POST /adjust` - [Authorize(Policy = "ManagerOrAbove")]
+- `GET /product/{productId}` - [Authorize(Policy = "SellerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "SellerOrAbove")]
+- `GET /low-stock` - [Authorize(Policy = "ManagerOrAbove")]
+
+**CashRegisterController** (`/api/cashregister`):
+- `POST` - [Authorize(Policy = "ManagerOrAbove")]
+- `GET /{id}` - [Authorize(Policy = "ManagerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
+- `GET /{id}/report` - [Authorize(Policy = "ManagerOrAbove")]
+
+**ReturnController** (`/api/return`):
+- `POST` - [Authorize(Policy = "SellerOrAbove")]
+- `GET /{id}` - [Authorize(Policy = "SellerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
+- `GET /status/{status}` - [Authorize(Policy = "ManagerOrAbove")]
+- `POST /{id}/approve` - [Authorize(Policy = "ManagerOrAbove")]
+- `POST /{id}/reject` - [Authorize(Policy = "ManagerOrAbove")]
+
+**RoleController** (`/api/role`):
+- `POST` - [Authorize(Policy = "AdminOnly")]
+- `GET /{id}` - [Authorize(Policy = "ManagerOrAbove")]
+- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
+- `PUT /{id}` - [Authorize(Policy = "AdminOnly")]
+- `DELETE /{id}` - [Authorize(Policy = "AdminOnly")]
+
+**Usage in Client**:
+```http
+Authorization: Bearer <access-token>
+```
+
+**HTTP Response Codes**:
+- `401 Unauthorized` - Missing or invalid token
+- `403 Forbidden` - Valid token but insufficient permissions
+- `200 OK` - Authorized and successful
+
 ## Current Project State
 
 ### ✅ Fully Implemented Features
 
 1. **Product Management** - CRUD, search by name/barcode, barcode uniqueness
 2. **Customer Management** - CRUD, search by name
-3. **User Management** - CRUD, search by name with role, password hashing
+3. **User Management** - CRUD, search by name with role, password hashing, account lockout, login tracking
 4. **Role Management** - CRUD operations
 5. **Inventory Management** - Stock adjustment (Add/Set/Remove operations), automatic restoration on sale cancellation/return approval
 6. **Sales Management** - Create sales with stock reservation and validation, sale cancellation with inventory rollback, PDF ticket generation
@@ -548,6 +742,21 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 14. **Domain Events** - Product created/price changed, sale created/cancelled, low stock detected, return approved
 15. **Two-Phase Stock Reservation** - Prevents overselling with validate/reserve, commit/rollback pattern
 16. **Nullable Reference Types** - All projects have nullable enabled, all warnings resolved (2026-02-11)
+17. **JWT Authentication** - Complete authentication system with access token (30 min) and refresh token (30 days)
+    - Login with email/password validation using BCrypt
+    - Account lockout after 5 failed attempts (30 minutes)
+    - Active/inactive account management
+    - Login tracking (LastLoginAt, FailedLoginAttempts)
+    - Token refresh endpoint
+    - Logout with token revocation
+    - Endpoints: `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`
+18. **Role-Based Access Control (RBAC)** - Complete authorization system with three roles
+    - **Administrador** (Admin): Full system access
+    - **Gerente** (Manager): Sales, inventory, reports, user management (read)
+    - **Vendedor** (Seller): Sales and basic queries only
+    - Authorization policies: `AdminOnly`, `ManagerOrAbove`, `SellerOrAbove`
+    - All endpoints protected with `[Authorize]` attributes
+    - Role-based claims in JWT tokens
 
 ### ⚠️ Implemented Infrastructure, Not Used
 
@@ -557,11 +766,13 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 ### ❌ Not Implemented
 
 1. **Payment Methods** - Sales do not track payment type (cash, card, etc.)
-2. **Authentication/Authorization** - No JWT or auth middleware
-3. **Product Categories** - No product categorization
-4. **Unit Tests** - No test projects exist
-5. **Caching** - Placeholder only
-6. **Sale Updates** - Sales can be cancelled but not edited (immutable after creation)
+2. **Product Categories** - No product categorization
+3. **Unit Tests** - No test projects exist
+4. **Caching** - Placeholder only
+5. **Sale Updates** - Sales can be cancelled but not edited (immutable after creation)
+6. **Password Recovery** - PasswordResetToken entity exists but workflow not implemented
+7. **Advanced Reports** - Sales reports with filters, charts, and export (PDF/Excel)
+8. **Dashboard Analytics** - Statistics, trends, and metrics visualization
 
 ### Important Notes
 
@@ -582,6 +793,13 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 - **PDF License:** QuestPDF Community License in use. For commercial production, acquire appropriate license.
 - **Nullable References:** All projects have `<Nullable>enable</Nullable>`. Never use `!` operator without null validation. Always validate `FirstOrDefaultAsync()` results before assignment.
 - **BaseCatalog.Description:** Changed from `string` to `string?` (nullable) as of migration `FixNullableDescriptions` (2026-02-11).
+- **JWT Authentication:** All endpoints (except `/api/auth/login`) require valid JWT Bearer token in Authorization header. SecretKey must be configured via User Secrets (min 32 characters).
+- **Authorization Policies:** Three policies available:
+  - `AdminOnly` - Requires "Administrador" role
+  - `ManagerOrAbove` - Requires "Administrador" or "Gerente" role
+  - `SellerOrAbove` - Requires "Administrador", "Gerente", or "Vendedor" role
+- **Account Security:** Account lockout after 5 failed login attempts for 30 minutes. User accounts can be activated/deactivated via `IsActive` property.
+- **Role Names:** Must match exactly in database: "Administrador", "Gerente", "Vendedor" (Spanish names).
 
 ## Complete Implementation Examples
 
@@ -712,6 +930,134 @@ public class ProductController : BaseController
     {
         var query = new ProductGetAllQuery();
         var result = await _mediator.Send(query);
+        return HandleResult(result);
+    }
+}
+```
+
+### Authentication Handler Example
+
+```csharp
+// File: Application/UseCases/Authentication/CQRS/Commands/Login/LoginHandler.cs
+using Application.DesignPatterns.Mediators.Interfaces;
+using Application.DesignPatterns.OperationResults;
+using Application.Interfaces.Persistence.UnitOfWorks;
+using Application.Interfaces.Services;
+using Application.Options;
+using Application.UseCases.Authentication.DTOs;
+using Domain.Entities.Authentication;
+using Domain.Entities.Users;
+using Microsoft.Extensions.Options;
+
+namespace Application.UseCases.Authentication.CQRS.Commands.Login;
+
+public class LoginHandler(
+    IUnitOfWork unitOfWork,
+    IEncryptionService encryptionService,
+    IJwtTokenService jwtTokenService,
+    IMapper mapper,
+    IOptions<JwtSettings> jwtSettings)
+    : IRequestHandler<LoginCommand, OperationResult<LoginResponseDTO>>
+{
+    public async Task<OperationResult<LoginResponseDTO>> Handle(
+        LoginCommand request,
+        CancellationToken cancellationToken)
+    {
+        // 1. Get user with role
+        var user = await unitOfWork.Users.GetByEmailWithRoleAsync(request.Email, cancellationToken);
+
+        if (user == null)
+            return Result.Error(ErrorResult.BadRequest, UserMessages.Authentication.InvalidCredentials);
+
+        // 2. Check if account is locked
+        if (user.IsLocked)
+        {
+            var minutesRemaining = (int)(user.LockedUntilAt!.Value - DateTime.UtcNow).TotalMinutes;
+            return Result.Error(ErrorResult.Forbidden,
+                string.Format(UserMessages.Authentication.AccountLocked, minutesRemaining));
+        }
+
+        // 3. Check if account is active
+        if (!user.IsActive)
+            return Result.Error(ErrorResult.Forbidden, UserMessages.Authentication.AccountInactive);
+
+        // 4. Validate password
+        if (!encryptionService.VerifyText(request.Password, user.PasswordHash))
+        {
+            user.RecordFailedLogin();
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return Result.Error(ErrorResult.BadRequest, UserMessages.Authentication.InvalidCredentials);
+        }
+
+        // 5. Record successful login
+        user.RecordSuccessfulLogin();
+
+        // 6. Generate tokens
+        var accessToken = jwtTokenService.GenerateAccessToken(
+            user.Id, user.Email.Value, user.RoleId, user.Role.Name);
+
+        var refreshTokenValue = jwtTokenService.GenerateRefreshToken();
+
+        var refreshToken = RefreshToken.Create(
+            user.Id,
+            refreshTokenValue,
+            DateTime.UtcNow.AddDays(jwtSettings.Value.RefreshTokenExpirationDays)
+        );
+
+        unitOfWork.RefreshTokens.Add(refreshToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // 7. Return response
+        var userDto = mapper.Map<UserDTO>(user);
+
+        return Result.Success(new LoginResponseDTO(
+            accessToken,
+            refreshTokenValue,
+            DateTime.UtcNow.AddMinutes(jwtSettings.Value.AccessTokenExpirationMinutes),
+            refreshToken.ExpiresAt,
+            userDto
+        ), UserMessages.Authentication.LoginSuccess);
+    }
+}
+```
+
+### Controller with Authorization Example
+
+```csharp
+// File: Web.API/Controllers/SaleController.cs
+using Application.DesignPatterns.Mediators.Interfaces;
+using Application.UseCases.Sales.CQRS.Commands.Create;
+using Application.UseCases.Sales.CQRS.Queries.GetAll;
+using Microsoft.AspNetCore.Authorization;
+
+namespace Web.API.Controllers;
+
+[Route("api/[controller]")]
+[Authorize] // Requires authentication for all endpoints
+public class SaleController(IMediator mediator) : BaseController
+{
+    [HttpPost]
+    [Authorize(Policy = "SellerOrAbove")] // Seller, Manager, or Admin can create sales
+    public async Task<IActionResult> Create([FromBody] CreateSaleCommand command)
+    {
+        var result = await mediator.Send(command);
+        return HandleResult(result, nameof(GetById));
+    }
+
+    [HttpGet]
+    [Authorize(Policy = "ManagerOrAbove")] // Only Manager or Admin can view all sales
+    public async Task<IActionResult> GetAll()
+    {
+        var query = new SaleGetAllQuery();
+        var result = await mediator.Send(query);
+        return HandleResult(result);
+    }
+
+    [HttpPost("{id:guid}/cancel")]
+    [Authorize(Policy = "ManagerOrAbove")] // Only Manager or Admin can cancel sales
+    public async Task<IActionResult> Cancel(Guid id, [FromBody] SaleCancelCommand command)
+    {
+        var result = await mediator.Send(command);
         return HandleResult(result);
     }
 }
