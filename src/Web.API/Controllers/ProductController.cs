@@ -4,6 +4,7 @@ using Application.UseCases.Products.CQRS.Commands.Update;
 using Application.UseCases.Products.CQRS.Commands.Delete;
 using Application.UseCases.Products.CQRS.Queries.GetById;
 using Application.UseCases.Products.CQRS.Queries.GetAll;
+using Application.UseCases.Products.CQRS.Queries.GetPaged;
 using Application.UseCases.Products.CQRS.Queries.Search;
 using Microsoft.AspNetCore.Authorization;
 
@@ -26,6 +27,18 @@ public class ProductController(IMediator mediator) : BaseController
     public async Task<IActionResult> GetAll()
     {
         var result = await mediator.Send(new ProductGetAllQuery());
+        return HandleResult(result);
+    }
+
+    [HttpGet("paged")]
+    [Authorize(Policy = "ManagementOnly")] // Gerente y Admin
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int pageIndex = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? searchTerm = null)
+    {
+        var query = new ProductGetPagedQuery(pageIndex, pageSize, searchTerm);
+        var result = await mediator.Send(query);
         return HandleResult(result);
     }
 

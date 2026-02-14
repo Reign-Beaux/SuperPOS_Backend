@@ -1,6 +1,8 @@
 using Domain.Entities;
 using Domain.Repositories;
+using Domain.Specifications;
 using Infrastructure.Persistence.Context;
+using Infrastructure.Persistence.Specification;
 
 namespace Infrastructure.Persistence;
 
@@ -148,5 +150,44 @@ public class RepositoryBase<T> : IRepositoryBase<T> where T : class, IAggregateR
         }
 
         return await query.AnyAsync(predicate, cancellationToken);
+    }
+
+    public virtual async Task<IReadOnlyList<T>> ListAsync(
+        ISpecification<T> spec,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet.AsQueryable();
+
+        // Apply soft delete filter if entity inherits from BaseEntity
+        if (typeof(BaseEntity).IsAssignableFrom(typeof(T)))
+        {
+            query = query.Where(e => EF.Property<DateTime?>(e, nameof(BaseEntity.DeletedAt)) == null);
+        }
+
+        // Apply specification (filtering, ordering, paging, includes, optimizations)
+        query = SpecificationEvaluator<T>.GetQuery(query, spec);
+
+        return await query.ToListAsync(cancellationToken);
+    }
+
+    public virtual async Task<int> CountAsync(
+        ISpecification<T> spec,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet.AsQueryable();
+
+        // Apply soft delete filter if entity inherits from BaseEntity
+        if (typeof(BaseEntity).IsAssignableFrom(typeof(T)))
+        {
+            query = query.Where(e => EF.Property<DateTime?>(e, nameof(BaseEntity.DeletedAt)) == null);
+        }
+
+        // Apply only the filter criteria from specification (no paging, ordering, or includes)
+        if (spec.Criteria is not null)
+        {
+            query = query.Where(spec.Criteria);
+        }
+
+        return await query.CountAsync(cancellationToken);
     }
 }

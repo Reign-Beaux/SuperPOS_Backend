@@ -3,6 +3,7 @@ using Application.DesignPatterns.OperationResults;
 using Domain.Repositories;
 using Application.UseCases.Products.DTOs;
 using Domain.Entities.Products;
+using Domain.Specifications.Products;
 
 namespace Application.UseCases.Products.CQRS.Queries.GetAll;
 
@@ -21,7 +22,9 @@ public sealed class ProductGetAllHandler : IRequestHandler<ProductGetAllQuery, O
         ProductGetAllQuery request,
         CancellationToken cancellationToken)
     {
-        var products = await _unitOfWork.Products.GetAllAsync(cancellationToken);
+        // Use Specification pattern to get all products with ordering
+        var specification = new AllProductsSpecification();
+        var products = await _unitOfWork.Products.ListAsync(specification, cancellationToken);
 
         var productsDto = _mapper.Map<IEnumerable<ProductDTO>>(products);
 

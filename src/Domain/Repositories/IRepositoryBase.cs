@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Domain.Entities;
+using Domain.Specifications;
 
 namespace Domain.Repositories;
 
@@ -68,5 +69,21 @@ public interface IRepositoryBase<T> where T : class, IAggregateRoot
     /// </summary>
     Task<bool> AnyAsync(
         Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets entities matching a specification (with filtering, ordering, paging, and includes).
+    /// Use this method for complex queries with multiple criteria, eager loading, and sorting.
+    /// </summary>
+    Task<IReadOnlyList<T>> ListAsync(
+        ISpecification<T> spec,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts entities matching a specification (applies only the filter criteria, ignoring paging).
+    /// Useful for getting total count when implementing pagination.
+    /// </summary>
+    Task<int> CountAsync(
+        ISpecification<T> spec,
         CancellationToken cancellationToken = default);
 }

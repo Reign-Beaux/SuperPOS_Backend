@@ -163,10 +163,13 @@ using Domain.Entities.{Entity};                         // Entity classes
    - Examples: `SaleCreatedEvent`, `LowStockEvent`, `SaleCancelledEvent`, `ReturnApprovedEvent`
    - Event handlers registered in DI and executed automatically on SaveChangesAsync
 
-6. **Specification Pattern** - `Application/DesignPatterns/Specifications/`
-   - `ISpecification<T>` / `BaseSpecification<T>` for complex queries
-   - **Note:** Infrastructure exists but not actively used
-   - `SpecificationEvaluator` in Infrastructure applies specifications to IQueryable
+6. **Specification Pattern** - `Domain/Specifications/`
+   - **Status**: ✅ Fully implemented and actively used
+   - Encapsulates query logic (filtering, ordering, paging, eager loading)
+   - `ISpecification<T>` / `BaseSpecification<T>` in Domain layer
+   - `SpecificationEvaluator<T>` in Infrastructure converts to IQueryable
+   - Integrated with `IRepositoryBase<T>` via `ListAsync()` and `CountAsync()`
+   - Example specifications in `Domain/Specifications/{Entity}/`
 
 ## Database Conventions
 
@@ -665,11 +668,13 @@ Authorization: Bearer <access-token>
 16. **Nullable Reference Types** - All projects have nullable enabled, all warnings resolved
 17. **JWT Authentication** - Complete authentication system with access token (30 min) and refresh token (30 days)
 18. **Role-Based Access Control (RBAC)** - Complete authorization system with three roles (Admin, Manager, Seller)
+19. **Specification Pattern** - Reusable query specifications with filtering, ordering, paging, and eager loading
+20. **Password Reset** - Complete password recovery workflow with email verification codes
 
-### ⚠️ Implemented Infrastructure, Not Used
+### ⚠️ Implemented Infrastructure, Not Fully Used
 
-- **Pagination** - `BasePaginationQuery` and `PaginationDTO` exist but no queries use them
-- **Specification Pattern** - Infrastructure exists but no actual specifications implemented
+- **Pagination** - `BasePaginationQuery` and `PaginationDTO` exist but only used in ProductGetPagedQuery
+- **Specification Pattern** - ✅ Fully implemented and actively used (see section below)
 
 ### ❌ Not Implemented
 
@@ -882,3 +887,200 @@ public class LoginHandler(
     }
 }
 ```
+
+### Specification Pattern Example
+
+The Specification pattern encapsulates query logic (filtering, ordering, paging, eager loading) in reusable, testeable classes.
+
+**Architecture**:
+- **Domain Layer** - Specifications interfaces and base classes (`Domain/Specifications/`)
+- **Infrastructure Layer** - SpecificationEvaluator converts specs to IQueryable (`Infrastructure/Persistence/Specification/`)
+- **Application Layer** - Uses specifications in handlers
+
+#### Creating a Specification
+
+```csharp
+// File: Domain/Specifications/Products/ProductsByNameSpecification.cs
+using Domain.Entities.Products;
+using Domain.Specifications;
+
+namespace Domain.Specifications.Products;
+
+/// <summary>
+/// Specification to search products by name with optional pagination.
+/// </summary>
+public class ProductsByNameSpecification : BaseSpecification<Product>
+{
+    /// <summary>
+    /// Search products by name (case-insensitive, partial match).
+    /// </summary>
+    public ProductsByNameSpecification(string searchTerm)
+        : base(p => p.Name.Contains(searchTerm))  // Filter criteria
+    {
+        // Ordering
+        AddOrderBy(p => p.Name);
+
+        // Query optimizations
+        SetTracking(false);  // AsNoTracking for read-only
+        SetSplitQuery(false); // No split query needed (single table)
+    }
+
+    /// <summary>
+    /// Search with pagination.
+    /// </summary>
+    public ProductsByNameSpecification(string searchTerm, int pageIndex, int pageSize)
+        : base(p => p.Name.Contains(searchTerm))
+    {
+        AddOrderBy(p => p.Name);
+        ApplyPaging((pageIndex - 1) * pageSize, pageSize);
+
+        SetTracking(false);
+        SetSplitQuery(false);
+    }
+}
+```
+
+#### Advanced Specification with Eager Loading
+
+```csharp
+// File: Domain/Specifications/Sales/SalesWithDetailsSpecification.cs
+using Domain.Entities.Sales;
+using Domain.Specifications;
+
+namespace Domain.Specifications.Sales;
+
+public class SalesWithDetailsSpecification : BaseSpecification<Sale>
+{
+    public SalesWithDetailsSpecification()
+    {
+        // Eager load related entities
+        AddInclude(s => s.Customer);
+        AddInclude(s => s.User);
+        AddInclude(s => s.SaleDetails);
+
+        // Deep navigation with string-based include
+        AddInclude("SaleDetails.Product");
+
+        // Ordering
+        AddOrderByDescending(s => s.CreatedAt);
+
+        // Query optimizations
+        SetTracking(false);
+        SetSplitQuery(true);  // Prevent cartesian explosion with multiple collections
+    }
+
+    /// <summary>
+    /// Filter by customer with pagination.
+    /// </summary>
+    public SalesWithDetailsSpecification(Guid customerId, int pageIndex, int pageSize)
+        : base(s => s.CustomerId == customerId)
+    {
+        AddInclude(s => s.Customer);
+        AddInclude(s => s.User);
+        AddInclude(s => s.SaleDetails);
+        AddInclude("SaleDetails.Product");
+
+        AddOrderByDescending(s => s.CreatedAt);
+        ApplyPaging((pageIndex - 1) * pageSize, pageSize);
+
+        SetTracking(false);
+        SetSplitQuery(true);
+    }
+}
+```
+
+#### Using Specifications in Handlers
+
+```csharp
+// File: Application/UseCases/Products/CQRS/Queries/Search/ProductSearchHandler.cs
+using Domain.Specifications.Products;
+
+public class ProductSearchHandler : IRequestHandler<ProductSearchQuery, OperationResult<IEnumerable<ProductDTO>>>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
+
+    public async Task<OperationResult<IEnumerable<ProductDTO>>> Handle(
+        ProductSearchQuery request,
+        CancellationToken cancellationToken)
+    {
+        // Create specification
+        var specification = new ProductsByNameSpecification(request.Term);
+
+        // Use ListAsync from repository
+        var products = await _unitOfWork.Products.ListAsync(specification, cancellationToken);
+
+        var dtos = _mapper.Map<IEnumerable<ProductDTO>>(products);
+        return Result.Success(dtos);
+    }
+}
+```
+
+#### Pagination with Total Count
+
+```csharp
+// File: Application/UseCases/Products/CQRS/Queries/GetPaged/ProductGetPagedHandler.cs
+using Domain.Specifications.Products;
+
+public class ProductGetPagedHandler : IRequestHandler<ProductGetPagedQuery, OperationResult<PagedProductsDTO>>
+{
+    public async Task<OperationResult<PagedProductsDTO>> Handle(
+        ProductGetPagedQuery request,
+        CancellationToken cancellationToken)
+    {
+        // Create specification with pagination
+        var specification = new ProductsByNameSpecification(
+            request.SearchTerm,
+            request.PageIndex,
+            request.PageSize);
+
+        // Get paginated results
+        var products = await _unitOfWork.Products.ListAsync(specification, cancellationToken);
+
+        // Get total count (CountAsync ignores paging/ordering, only applies filter)
+        var totalCount = await _unitOfWork.Products.CountAsync(specification, cancellationToken);
+
+        // Calculate metadata
+        var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
+
+        var productDtos = _mapper.Map<List<ProductDTO>>(products);
+
+        return Result.Success(new PagedProductsDTO(
+            Items: productDtos,
+            TotalCount: totalCount,
+            PageIndex: request.PageIndex,
+            PageSize: request.PageSize,
+            TotalPages: totalPages
+        ));
+    }
+}
+```
+
+#### Specification Features
+
+**BaseSpecification<T> provides**:
+- `AddOrderBy(expr)` - Primary ascending ordering
+- `AddOrderByDescending(expr)` - Primary descending ordering
+- `AddThenBy(expr)` - Secondary ascending ordering
+- `AddThenByDescending(expr)` - Secondary descending ordering
+- `AddInclude(expr)` - Eager load navigation property (lambda)
+- `AddInclude(string)` - Eager load deep navigation (e.g., "SaleDetails.Product")
+- `ApplyPaging(skip, take)` - Enable pagination
+- `SetTracking(bool)` - Enable/disable EF change tracking (default: false)
+- `SetSplitQuery(bool)` - Enable/disable split query (default: true)
+
+**Repository Methods**:
+- `ListAsync(ISpecification<T> spec)` - Get entities matching specification
+- `CountAsync(ISpecification<T> spec)` - Count entities (ignores paging/ordering/includes)
+
+**When to Use Specifications**:
+- ✅ Complex queries with multiple criteria
+- ✅ Queries with eager loading (Include)
+- ✅ Queries with pagination and total count
+- ✅ Reusable query logic across multiple handlers
+- ✅ Type-safe, testeable query encapsulation
+
+**When NOT to Use**:
+- ❌ Simple `GetByIdAsync()` queries
+- ❌ Simple `GetAllAsync()` queries without filtering
+- ❌ One-off queries not reused elsewhere
