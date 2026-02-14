@@ -4,6 +4,7 @@ using Application.Interfaces.Persistence;
 using Application.Interfaces.Services;
 using Application.Options;
 using Application.UseCases.Authentication.DTOs;
+using Domain.Entities.Authentication;
 using Domain.Entities.Users;
 using Microsoft.Extensions.Options;
 
@@ -11,6 +12,7 @@ namespace Application.UseCases.Authentication.CQRS.Commands.RefreshToken;
 
 /// <summary>
 /// Handler for refreshing access tokens using a valid refresh token.
+/// Implements Refresh Token Rotation: generates a new refresh token and revokes the old one.
 /// </summary>
 public class RefreshTokenHandler(
     IUnitOfWork unitOfWork,
@@ -51,14 +53,33 @@ public class RefreshTokenHandler(
             user.RoleId,
             user.Role.Name);
 
-        var expiresAt = DateTime.UtcNow.AddMinutes(jwtSettings.Value.AccessTokenExpirationMinutes);
+        var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(jwtSettings.Value.AccessTokenExpirationMinutes);
 
-        // 6. Retornar respuesta
+        // 6. REFRESH TOKEN ROTATION - Generar nuevo refresh token
+        var newRefreshTokenValue = jwtTokenService.GenerateRefreshToken();
+
+        var newRefreshToken = Domain.Entities.Authentication.RefreshToken.Create(
+            user.Id,
+            newRefreshTokenValue,
+            jwtSettings.Value.RefreshTokenExpirationDays);
+
+        var refreshTokenExpiresAt = newRefreshToken.ExpiresAt;
+
+        // 7. Revocar el refresh token anterior
+        refreshToken.Revoke();
+
+        // 8. Guardar el nuevo refresh token
+        unitOfWork.RefreshTokens.Add(newRefreshToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // 9. Retornar respuesta con nuevo access token y nuevo refresh token
         var response = new RefreshTokenResponseDTO
         {
             AccessToken = accessToken,
             ExpiresIn = jwtSettings.Value.AccessTokenExpirationMinutes * 60, // ExpiresIn en segundos
-            AccessTokenExpiresAt = expiresAt
+            AccessTokenExpiresAt = accessTokenExpiresAt,
+            RefreshToken = newRefreshTokenValue,
+            RefreshTokenExpiresAt = refreshTokenExpiresAt
         };
 
         return Result.Success(response);
