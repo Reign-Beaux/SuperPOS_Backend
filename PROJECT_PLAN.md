@@ -401,6 +401,219 @@ Este proyecto está diseñado como una **experiencia de aprendizaje completa** q
 
 ---
 
-**Versión**: 1.0
-**Última actualización**: 2026-02-08
+## 🔐 FUNCIONALIDADES EXTRAS IMPLEMENTADAS (No Planeadas)
+
+Durante el desarrollo del proyecto SuperPOS, se implementaron funcionalidades adicionales de seguridad que **NO estaban contempladas en el plan original**, pero que resultaron ser **necesarias y valiosas** para tener un sistema robusto y seguro en producción.
+
+Estas funcionalidades fueron agregadas como mejoras de seguridad esenciales:
+
+---
+
+### 1. Security Headers Middleware
+
+**Qué es**: Middleware que agrega encabezados de seguridad HTTP a todas las respuestas del servidor.
+
+**Para qué sirve**:
+- Proteger contra ataques comunes (clickjacking, XSS, MIME sniffing)
+- Cumplir con mejores prácticas de seguridad web
+- Mejorar puntuación en auditorías de seguridad (OWASP, Mozilla Observatory)
+
+**Implementación**:
+- Middleware personalizado `SecurityHeadersMiddleware`
+- 7 headers de seguridad configurados:
+  - `X-Frame-Options: DENY` - Previene clickjacking
+  - `X-Content-Type-Options: nosniff` - Previene MIME sniffing
+  - `X-XSS-Protection: 1; mode=block` - Protección XSS
+  - `Content-Security-Policy` - Política de seguridad de contenido
+  - `Referrer-Policy: no-referrer` - Control de información de referencia
+  - `Permissions-Policy` - Control de APIs del navegador
+  - `Strict-Transport-Security` - HSTS para HTTPS
+
+**Complejidad**: Baja (1-2 horas)
+
+---
+
+### 2. Refresh Token Rotation
+
+**Qué es**: Patrón de seguridad donde cada vez que se renueva el access token, también se genera un nuevo refresh token y se revoca el anterior.
+
+**Para qué sirve**:
+- Minimizar el riesgo de robo de refresh tokens
+- Limitar la ventana de tiempo para usar tokens comprometidos
+- Detectar uso indebido de tokens (si se intenta usar un token ya rotado)
+- Cumplir con OAuth 2.0 Security Best Current Practice (BCP)
+
+**Implementación**:
+- Modificación de `RefreshTokenHandler` para generar nuevo refresh token
+- Extensión de `RefreshTokenResponseDTO` con nuevos campos
+- Revocación automática del token anterior
+- Frontend debe almacenar ambos tokens (access + refresh)
+
+**Complejidad**: Media (2-3 horas)
+
+**Homologación Frontend**: Requiere actualizar cliente para guardar nuevo refresh token
+
+---
+
+### 3. Password Complexity Validation
+
+**Qué es**: Sistema de validación de complejidad de contraseñas usando Value Object del Domain.
+
+**Para qué sirve**:
+- Forzar contraseñas seguras desde el registro de usuarios
+- Proteger contra ataques de diccionario y fuerza bruta
+- Cumplir con estándares de seguridad (NIST, OWASP)
+
+**Implementación**:
+- `Password` Value Object con validaciones robustas
+- Reglas implementadas:
+  - Mínimo 8 caracteres, máximo 32
+  - Al menos una mayúscula (A-Z)
+  - Al menos una minúscula (a-z)
+  - Al menos un número (0-9)
+  - Al menos un carácter especial ($%&@)
+  - Sin espacios en blanco
+
+**Complejidad**: Media (2-3 horas)
+
+**Homologación Frontend**: Validación Zod sincronizada con backend
+
+---
+
+### 4. Rate Limiting
+
+**Qué es**: Limitación de cantidad de peticiones por dirección IP en un periodo de tiempo.
+
+**Para qué sirve**:
+- Prevenir ataques de fuerza bruta en endpoints de autenticación
+- Proteger contra abuso de API
+- Mejorar estabilidad del servidor ante tráfico excesivo
+- Detectar comportamiento sospechoso
+
+**Implementación**:
+- Librería: `AspNetCoreRateLimit 5.0.0`
+- Configuración por endpoint:
+  - `POST /api/auth/login`: 5 peticiones/minuto
+  - `POST /api/auth/refresh`: 10 peticiones/minuto
+  - Endpoints generales: 100 peticiones/minuto
+- Respuesta: HTTP 429 Too Many Requests
+
+**Complejidad**: Media (2-3 horas)
+
+**Configuración**: appsettings.json con reglas personalizables
+
+---
+
+### 5. Token Cleanup Service
+
+**Qué es**: Servicio en segundo plano (background service) que limpia automáticamente refresh tokens expirados de la base de datos.
+
+**Para qué sirve**:
+- Mantener la base de datos limpia y optimizada
+- Mejorar rendimiento de consultas
+- Liberar espacio en disco
+- Automatizar tareas de mantenimiento
+
+**Implementación**:
+- `TokenCleanupService` usando `IHostedService`
+- `PeriodicTimer` para ejecución cada 24 horas
+- Retraso inicial de 5 minutos al iniciar app
+- `DeleteExpiredTokensAsync()` en RefreshTokenRepository
+
+**Complejidad**: Media (2-3 horas)
+
+**Beneficio adicional**: Patrón reutilizable para otros background jobs
+
+---
+
+### 6. Audit Logging
+
+**Qué es**: Sistema de auditoría que registra todos los eventos de seguridad en una tabla dedicada.
+
+**Para qué sirve**:
+- Trazabilidad completa de eventos de seguridad
+- Detectar intentos de intrusión o accesos no autorizados
+- Análisis forense de incidentes de seguridad
+- Cumplimiento con regulaciones (GDPR, SOC 2, ISO 27001)
+- Debugging de problemas de autenticación
+
+**Implementación**:
+- `SecurityAuditLog` - Entidad de dominio
+- `SecurityAuditEventTypes` - Constantes de tipos de eventos:
+  - Login, LoginFailed, Logout
+  - RefreshToken, RefreshTokenFailed
+  - AccountLocked, PasswordChanged
+  - UserCreated, UserUpdated, UserDeleted
+  - UnauthorizedAccess
+- `ICurrentUserContext` - Abstracción Clean Architecture para capturar IP y User-Agent
+- `CurrentUserContext` - Implementación con `IHttpContextAccessor`
+- Integración en handlers de autenticación (Login, Logout)
+
+**Información registrada**:
+- UserId (nullable para eventos anónimos)
+- EventType (tipo de evento)
+- IpAddress (dirección IP de la petición)
+- UserAgent (navegador/cliente)
+- IsSuccess (si el evento fue exitoso)
+- Details (detalles adicionales)
+- Timestamp automático (CreatedAt)
+
+**Complejidad**: Alta (4-5 horas)
+
+**Clean Architecture**: Abstracción `ICurrentUserContext` para no violar dependencias de capas
+
+---
+
+## 📊 Resumen de Funcionalidades Extra
+
+| # | Funcionalidad | Propósito | Complejidad | Tiempo Estimado |
+|---|---------------|-----------|-------------|-----------------|
+| 1 | Security Headers | Protección web básica | Baja | 1-2 horas |
+| 2 | Refresh Token Rotation | Seguridad de tokens | Media | 2-3 horas |
+| 3 | Password Complexity | Contraseñas seguras | Media | 2-3 horas |
+| 4 | Rate Limiting | Anti fuerza bruta | Media | 2-3 horas |
+| 5 | Token Cleanup Service | Mantenimiento automático | Media | 2-3 horas |
+| 6 | Audit Logging | Trazabilidad de seguridad | Alta | 4-5 horas |
+
+**Total de Funcionalidades**: 6
+**Tiempo Total Estimado**: 13-19 horas
+**Estado**: ✅ **Todas implementadas** (2026-02-13)
+
+---
+
+## 💡 Lecciones Aprendidas
+
+La implementación de estas funcionalidades extras demostró que:
+
+1. **La seguridad es iterativa**: Aunque se planeó JWT y RBAC, en producción se necesitan capas adicionales de seguridad.
+
+2. **Las mejores prácticas evolucionan**: OAuth 2.0 BCP recomienda refresh token rotation, aunque no era estándar hace años.
+
+3. **La auditoría es esencial**: Sin audit logging, es imposible detectar y responder a incidentes de seguridad.
+
+4. **Clean Architecture es flexible**: Se pudo agregar `ICurrentUserContext` sin violar principios de dependencias.
+
+5. **Homologación frontend-backend**: Funcionalidades como Password Complexity y Refresh Token Rotation requieren coordinación con el cliente.
+
+6. **Background services son poderosos**: Token Cleanup Service es un patrón reutilizable para muchas otras tareas.
+
+---
+
+## 🎯 Recomendación para Nuevos Proyectos
+
+Si inicias un nuevo proyecto de este tipo, **considera incluir estas 6 funcionalidades desde el plan inicial**, especialmente:
+
+- **Rate Limiting** - Esencial desde día 1 en producción
+- **Security Headers** - Rápido de implementar, gran impacto
+- **Audit Logging** - Más difícil de agregar después que desde el inicio
+- **Password Complexity** - Mejor experiencia si se valida desde el primer usuario
+
+---
+
+**Recuerda**: La clave del aprendizaje es implementar paso a paso, entender cada concepto antes de avanzar, y no tener miedo de experimentar y cometer errores.
+
+---
+
+**Versión**: 1.1
+**Última actualización**: 2026-02-13
 **Autor**: Plan generado para aprendizaje del proyecto SuperPOS
