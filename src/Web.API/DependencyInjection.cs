@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddSerializations();
         services.AddJwtConfiguration(configuration);
         services.AddScoped<GlobalExceptionHandlingMiddleware>();
+        services.AddScoped<SecurityHeadersMiddleware>();
 
         return services;
     }
