@@ -10,6 +10,7 @@ using Domain.Entities.Emails;
 using Domain.Entities.Authentication;
 using Domain.Entities.Chat;
 using Domain.Entities.Returns;
+using Domain.Entities.Security;
 using Domain.ValueObjects;
 
 namespace Infrastructure.Persistence.Context;
@@ -31,6 +32,7 @@ public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : Db
     public DbSet<Conversation> Conversations { get; set; } = null!;
     public DbSet<Return> Returns { get; set; } = null!;
     public DbSet<ReturnDetail> ReturnDetails { get; set; } = null!;
+    public DbSet<SecurityAuditLog> SecurityAuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +42,7 @@ public class SuperPOSDbContext(DbContextOptions<SuperPOSDbContext> options) : Db
         modelBuilder.Ignore<Email>();
         modelBuilder.Ignore<PhoneNumber>();
         modelBuilder.Ignore<PersonName>();
+        modelBuilder.Ignore<Password>();
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(SuperPOSDbContext).Assembly);
     }

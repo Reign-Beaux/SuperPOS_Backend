@@ -5,6 +5,7 @@ using Application.Interfaces.Services;
 using Application.Options;
 using Application.UseCases.Authentication.DTOs;
 using Application.UseCases.Users.DTOs;
+using Domain.Entities.Security;
 using Domain.Entities.Users;
 using Microsoft.Extensions.Options;
 using RefreshTokenEntity = Domain.Entities.Authentication.RefreshToken;
@@ -12,14 +13,15 @@ using RefreshTokenEntity = Domain.Entities.Authentication.RefreshToken;
 namespace Application.UseCases.Authentication.CQRS.Commands.Login;
 
 /// <summary>
-/// Handler for user login with JWT token generation.
+/// Handler for user login with JWT token generation and audit logging.
 /// </summary>
 public class LoginHandler(
     IUnitOfWork unitOfWork,
     IEncryptionService encryptionService,
     IJwtTokenService jwtTokenService,
     IMapper mapper,
-    IOptions<JwtSettings> jwtSettings)
+    IOptions<JwtSettings> jwtSettings,
+    ICurrentUserContext currentUserContext)
     : IRequestHandler<LoginCommand, OperationResult<LoginResponseDTO>>
 {
     public async Task<OperationResult<LoginResponseDTO>> Handle(
@@ -59,6 +61,17 @@ public class LoginHandler(
         {
             // 6. Registrar intento fallido
             user.RecordFailedLogin();
+
+            // Audit: Login fallido
+            var auditLogFailed = SecurityAuditLog.Create(
+                user.Id,
+                SecurityAuditEventTypes.LoginFailed,
+                currentUserContext.IpAddress,
+                currentUserContext.UserAgent,
+                isSuccess: false,
+                details: $"Contraseña incorrecta para {user.Email}");
+
+            unitOfWork.Repository<SecurityAuditLog>().Add(auditLogFailed);
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result.Error(ErrorResult.BadRequest, detail: UserMessages.Authentication.InvalidCredentials);
@@ -85,7 +98,18 @@ public class LoginHandler(
 
         unitOfWork.RefreshTokens.Add(refreshToken);
 
-        // Guardar cambios (login exitoso y refresh token)
+        // Audit: Login exitoso
+        var auditLogSuccess = SecurityAuditLog.Create(
+            user.Id,
+            SecurityAuditEventTypes.Login,
+            currentUserContext.IpAddress,
+            currentUserContext.UserAgent,
+            isSuccess: true,
+            details: $"Login exitoso para {user.Email}");
+
+        unitOfWork.Repository<SecurityAuditLog>().Add(auditLogSuccess);
+
+        // Guardar cambios (login exitoso, refresh token y audit log)
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // 11. Mapear user a DTO

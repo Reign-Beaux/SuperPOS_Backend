@@ -1,15 +1,17 @@
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Application.Interfaces.Persistence;
+using Application.Interfaces.Services;
+using Domain.Entities.Security;
 using Domain.Entities.Users;
 
 namespace Application.UseCases.Authentication.CQRS.Commands.Logout;
 
 /// <summary>
-/// Handler for user logout by revoking refresh token.
+/// Handler for user logout by revoking refresh token with audit logging.
 /// Idempotent operation - safe to call multiple times.
 /// </summary>
-public class LogoutHandler(IUnitOfWork unitOfWork)
+public class LogoutHandler(IUnitOfWork unitOfWork, ICurrentUserContext currentUserContext)
     : IRequestHandler<LogoutCommand, OperationResult<VoidResult>>
 {
     public async Task<OperationResult<VoidResult>> Handle(
@@ -28,6 +30,17 @@ public class LogoutHandler(IUnitOfWork unitOfWork)
         if (refreshToken != null && !refreshToken.IsRevoked)
         {
             refreshToken.Revoke();
+
+            // Audit: Logout exitoso
+            var auditLog = SecurityAuditLog.Create(
+                refreshToken.UserId,
+                SecurityAuditEventTypes.Logout,
+                currentUserContext.IpAddress,
+                currentUserContext.UserAgent,
+                isSuccess: true,
+                details: "Logout exitoso - Refresh token revocado");
+
+            unitOfWork.Repository<SecurityAuditLog>().Add(auditLog);
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

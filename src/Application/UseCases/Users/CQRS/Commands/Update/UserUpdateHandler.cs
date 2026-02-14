@@ -3,6 +3,7 @@ using Domain.Entities.Users;
 using Application.DesignPatterns.Mediators.Interfaces;
 using Application.DesignPatterns.OperationResults;
 using Application.Interfaces.Services;
+using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.Services;
 using Domain.ValueObjects;
@@ -86,7 +87,18 @@ public sealed class UserUpdateHandler
         // Change password if provided
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
-            var hashedPassword = _encryptionService.HashText(request.Password);
+            // Validate password complexity
+            Password password;
+            try
+            {
+                password = Password.Create(request.Password);
+            }
+            catch (InvalidValueObjectException ex)
+            {
+                return Result.Error(ErrorResult.BadRequest, detail: ex.Message);
+            }
+
+            var hashedPassword = _encryptionService.HashText(password.Value);
             user.ChangePassword(hashedPassword);
         }
 

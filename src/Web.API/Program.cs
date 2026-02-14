@@ -1,4 +1,5 @@
 using Application;
+using AspNetCoreRateLimit;
 using Infrastructure;
 using Web.API;
 using Web.API.Extensions;
@@ -38,6 +39,12 @@ builder.Services.AddCors(options =>
       });
 });
 
+// Configure IP Rate Limiting
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -50,6 +57,7 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
+app.UseIpRateLimiting();
 app.UseCors(cors);
 app.UseAuthentication();
 app.UseAuthorization();

@@ -3,6 +3,7 @@ using Application.Interfaces.Persistence;
 using Application.Interfaces.Services;
 using Domain.Repositories;
 using Domain.Services;
+using Infrastructure.BackgroundServices;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
@@ -62,6 +63,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IEncryptionService, EncryptionService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 
         // Domain Event Dispatcher
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
@@ -76,6 +78,9 @@ public static class DependencyInjection
         // Application services
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ITicketService, TicketService>();
+
+        // Background services
+        services.AddHostedService<TokenCleanupService>();
 
         return services;
     }

@@ -3,6 +3,7 @@ using Application.DesignPatterns.OperationResults;
 using Application.Interfaces.Services;
 using Domain.Entities.Roles;
 using Domain.Entities.Users;
+using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.Services;
 using Domain.ValueObjects;
@@ -47,8 +48,19 @@ public sealed class CreateUserHandler
                 ErrorResult.Exists,
                 detail: UserMessages.AlreadyExists.WithEmail(request.Email));
 
+        // Validate password complexity
+        Password password;
+        try
+        {
+            password = Password.Create(request.Password);
+        }
+        catch (InvalidValueObjectException ex)
+        {
+            return Result.Error(ErrorResult.BadRequest, detail: ex.Message);
+        }
+
         // Hash password
-        var hashedPassword = _encryptionService.HashText(request.Password);
+        var hashedPassword = _encryptionService.HashText(password.Value);
 
         // Create value objects
         var name = PersonName.Create(request.Name, request.FirstLastname, request.SecondLastname);
