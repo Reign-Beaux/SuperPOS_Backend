@@ -17,7 +17,7 @@ dotnet build
 # Restore packages
 dotnet restore
 
-# Run tests (if test projects exist)
+# Run tests
 dotnet test
 
 # Create a new EF migration
@@ -35,10 +35,10 @@ This is a .NET 10 / C# 13 REST API following **Clean Architecture** with four la
 
 ```
 src/
-├── Domain/          # Core entities, no external dependencies
-├── Application/     # Use cases, CQRS, business logic
-├── Infrastructure/  # EF Core, database, external services
-└── Web.API/         # Controllers, HTTP entry point
+├── Domain/          # Core entities, value objects, domain events, interfaces
+├── Application/     # Use cases, CQRS, DTOs, handlers, business logic
+├── Infrastructure/  # EF Core, database, repositories, external services
+└── Web.API/         # Controllers, middleware, HTTP entry point
 ```
 
 **Dependency flow:** Web.API → Application ← Infrastructure → Domain
@@ -47,14 +47,16 @@ src/
 
 Each layer has a `GlobalUsings.cs` file that provides commonly-used namespaces globally. **DO NOT** add these usings to individual files as they are already available:
 
-#### Web.API Layer (`src/Web.API/GlobalUsings.cs`)
+#### Web.API Layer
 ```csharp
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.EntityFrameworkCore;
 ```
 
-#### Application Layer (`src/Application/GlobalUsings.cs`)
+#### Application Layer
 ```csharp
+global using Application.Interfaces.Persistence;
+global using FluentValidation;
 global using Mapster;
 global using MapsterMapper;
 global using Microsoft.EntityFrameworkCore;
@@ -62,8 +64,9 @@ global using Microsoft.Extensions.DependencyInjection;
 global using System.Linq.Expressions;
 ```
 
-#### Infrastructure Layer (`src/Infrastructure/GlobalUsings.cs`)
+#### Infrastructure Layer
 ```csharp
+global using Application.Interfaces.Persistence;
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore.Metadata.Builders;
 global using Microsoft.EntityFrameworkCore.Storage;
@@ -81,7 +84,6 @@ global using System.Linq.Expressions;
 using Application.DesignPatterns.Mediators.Interfaces;  // IRequest<T>
 using Application.DesignPatterns.OperationResults;      // OperationResult<T>
 using Application.UseCases.{Entity}.DTOs;               // DTOs
-// Note: MapsterMapper, System.Linq.Expressions already global
 ```
 
 **Handlers** (Application layer):
@@ -91,7 +93,6 @@ using Application.DesignPatterns.OperationResults;      // OperationResult<T>, R
 using Application.Interfaces.Persistence.UnitOfWorks;   // IUnitOfWork
 using Application.UseCases.{Entity}.DTOs;               // DTOs
 using Domain.Entities.{Entity};                         // Entity classes
-// Note: MapsterMapper already global (provides IMapper)
 ```
 
 **Controllers** (Web.API layer):
@@ -99,7 +100,6 @@ using Domain.Entities.{Entity};                         // Entity classes
 using Application.DesignPatterns.Mediators.Interfaces;  // IMediator
 using Application.UseCases.{Entity}.CQRS.Commands.*;    // Commands
 using Application.UseCases.{Entity}.CQRS.Queries.*;     // Queries
-// Note: Microsoft.AspNetCore.Mvc already global
 ```
 
 **Mappings** (Application layer):
@@ -112,10 +112,10 @@ using Domain.Entities.{Entity};                         // Entity classes
 **Entity Configurations** (Infrastructure layer):
 ```csharp
 using Domain.Entities.{Entity};                         // Entity classes
-// Note: EntityFrameworkCore.Metadata.Builders already global (provides IEntityTypeConfiguration)
+// Note: EntityFrameworkCore.Metadata.Builders already global
 ```
 
-### Key Patterns
+## Key Patterns
 
 1. **Custom Mediator** (not MediatR) - `Application/DesignPatterns/Mediators/`
    - `IRequest<TResponse>` / `IRequestHandler<TRequest, TResponse>`
@@ -127,7 +127,7 @@ using Domain.Entities.{Entity};                         // Entity classes
    - Factory methods in `Result` class:
      - `Result.Success<T>(T data)` - Returns 200 OK
      - `Result.Success<T>(T data, string message)` - Returns 200 OK with message
-     - `Result.Error(ErrorResult errorType, string? detail = null)` - Returns error (returns OperationResult<VoidResult>)
+     - `Result.Error(ErrorResult errorType, string? detail = null)` - Returns error
      - `new OperationResult<T>(StatusResult.Created, T data)` - Returns 201 Created
    - `StatusResult` enum values:
      - `Ok`, `NoContent`, `Created`, `Exists`, `Conflict`, `BadRequest`, `NotFound`, `InternalServerError`, `Forbidden`, `ServiceUnavailable`, `GatewayTimeout`
@@ -144,52 +144,45 @@ using Domain.Entities.{Entity};                         // Entity classes
 4. **Repository + Unit of Work** - `Infrastructure/Persistence/`
    - Generic `RepositoryBase<T>` with soft delete support
    - `IUnitOfWork` for transaction management
-   - Base repository methods available:
-     - `GetAllAsync(CancellationToken)` - Get all entities (excludes soft-deleted)
-     - `GetByIdAsync(Guid id, CancellationToken)` - Get entity by ID
-     - `Add(T entity)` - Add entity (call SaveChangesAsync to persist)
-     - `Update(T entity)` - Update entity (call SaveChangesAsync to persist)
-     - `Delete(T entity)` - Soft delete entity (call SaveChangesAsync to persist)
-     - `FirstOrDefaultAsync(Expression<Func<T, bool>> predicate, CancellationToken)` - Find first match
-     - `QueryAsync(Expression<Func<T, bool>>? predicate, Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy, CancellationToken)` - Query with filters
-     - `AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken)` - Check if any match
-     - `CountAsync(Expression<Func<T, bool>>? predicate, CancellationToken)` - Count entities
-     - `GetAllWithSpecAsync(ISpecification<T> spec, CancellationToken)` - Query using specification pattern
-   - **UnitOfWork specific repositories** (preferred over generic):
-     - `_unitOfWork.Products` - IProductRepository (with SearchByNameAsync, ExistsByBarcodeAsync, etc.)
+   - Specific repositories available:
+     - `_unitOfWork.Products` - IProductRepository (with SearchByNameAsync, ExistsByBarcodeAsync)
      - `_unitOfWork.Customers` - ICustomerRepository (with SearchByNameAsync)
      - `_unitOfWork.Users` - IUserRepository (with SearchByNameAsync, GetByEmailAsync, GetByEmailWithRoleAsync)
-     - `_unitOfWork.Sales` - ISaleRepository (with GetByDateRangeAsync, GetByIdWithDetailsAsync, etc.)
+     - `_unitOfWork.Sales` - ISaleRepository (with GetByDateRangeAsync, GetByIdWithDetailsAsync, GetAllWithDetailsAsync)
      - `_unitOfWork.Inventories` - IInventoryRepository (with GetByProductIdAsync, GetLowStockItemsAsync)
-     - `_unitOfWork.Returns` - IReturnRepository (with GetByStatusAsync, GetBySaleIdAsync, etc.)
+     - `_unitOfWork.Returns` - IReturnRepository (with GetByStatusAsync, GetBySaleIdAsync)
      - `_unitOfWork.CashRegisters` - ICashRegisterRepository (with GetByIdWithDetailsAsync)
      - `_unitOfWork.Roles` - IRoleRepository
-     - `_unitOfWork.RefreshTokens` - IRefreshTokenRepository (with GetActiveTokenAsync, RevokeAllUserTokensAsync, etc.)
+     - `_unitOfWork.RefreshTokens` - IRefreshTokenRepository (with GetActiveTokenAsync, RevokeAllUserTokensAsync)
    - Generic access: `_unitOfWork.Repository<EntityType>()`
-   - **Note:** Base repository does NOT support eager loading. However, specific repositories (like ISaleRepository) have custom methods with eager loading (e.g., `GetByIdWithDetailsAsync()`)
+   - **Note:** Base repository does NOT support eager loading. Use specific repository methods for eager loading.
 
-5. **Specification Pattern** - `Application/DesignPatterns/Specifications/`
+5. **Domain Events** - `Domain/Events/`, `Application/DesignPatterns/Events/`
+   - `IDomainEvent` / `DomainEvent` base classes
+   - `IDomainEventDispatcher` for dispatching events
+   - Examples: `SaleCreatedEvent`, `LowStockEvent`, `SaleCancelledEvent`, `ReturnApprovedEvent`
+   - Event handlers registered in DI and executed automatically on SaveChangesAsync
+
+6. **Specification Pattern** - `Application/DesignPatterns/Specifications/`
    - `ISpecification<T>` / `BaseSpecification<T>` for complex queries
-   - Supports: Criteria, Includes, OrderBy/OrderByDescending, Pagination
+   - **Note:** Infrastructure exists but not actively used
    - `SpecificationEvaluator` in Infrastructure applies specifications to IQueryable
-   - `BasePaginationQuery` and `PaginationDTO` for paginated responses
-   - **Note:** Infrastructure exists but no actual specifications are currently implemented. Use specific repository methods for now.
 
-### Database Conventions
+## Database Conventions
 
 - All entities inherit from `BaseEntity` (Guid v7 ID, CreatedAt, UpdatedAt, DeletedAt)
 - Catalog entities inherit from `BaseCatalog` (extends BaseEntity with Name, Description?)
-  - **Note:** `Description` is nullable (string?) in `BaseCatalog` as of 2026-02-11
+  - **Note:** `Description` is nullable (string?) in `BaseCatalog`
 - Soft deletes: `DeletedAt` is set instead of removing rows
 - Connection string: `SuperPOS` in configuration
 - SQL Server via EF Core 10
 
-### Nullable Reference Types
+## Nullable Reference Types
 
 **Status**: ✅ Enabled in all projects (`<Nullable>enable</Nullable>`)
 
 **Important Guidelines**:
-- ✅ All nullable warnings have been resolved (as of 2026-02-11)
+- ✅ All nullable warnings have been resolved
 - ❌ **Never use null-forgiving operator (`!`)** without null validation
 - ✅ Always validate null before assignment when using `FirstOrDefaultAsync()`
 - ✅ Use `string?` for optional parameters
@@ -227,18 +220,21 @@ public async Task SendEmailAsync(string recipientEmail, ...)
    - Add repository interface `I{Entity}Repository` in `src/Domain/Repositories/` if custom methods needed
    - Consider value objects if needed
    - Add domain events if needed
+
 2. **Application**:
    - Create folder `src/Application/UseCases/{Entity}/`
    - Add `DTOs/{Entity}DTO.cs`
    - Add `{Entity}Mappings.cs` (Mapster config)
    - Add `CQRS/Commands/` and `CQRS/Queries/` with handlers
-   - **Validation:** Implement in handlers directly or via domain services (no separate validator files)
+   - **Validation:** Implement in handlers directly or via FluentValidation
+
 3. **Infrastructure**:
    - Add `DbSet<Entity>` to `SuperPOSDbContext`
    - Add EF configuration in `Persistence/Configurations/`
    - Add repository implementation in `Persistence/Repositories/` if custom methods needed
    - Add repository property to `IUnitOfWork` and `UnitOfWork`
    - Create migration
+
 4. **Web.API**:
    - Add controller inheriting `BaseController`
    - **Important:** POST endpoints must call `HandleResult(result, nameof(GetById))` to generate Location header
@@ -305,7 +301,7 @@ public async Task SendEmailAsync(string recipientEmail, ...)
 
 ### User Secrets
 - User secrets ID: `7758d9ef-4f1e-495a-9803-32babd135164`
-- Store sensitive data (connection strings, API keys, JWT secret) using:
+- Store sensitive data using:
   ```bash
   dotnet user-secrets set "ConnectionStrings:SuperPOS" "your-connection-string"
   dotnet user-secrets set "JwtSettings:SecretKey" "your-secret-key-min-32-chars"
@@ -319,19 +315,21 @@ All configuration can be overridden via environment variables using the format:
 
 ### External NuGet Packages
 
-**Core Packages** (already installed):
+**Core Packages**:
 - Entity Framework Core 10.x
 - Mapster / MapsterMapper
+- FluentValidation.DependencyInjectionExtensions 12.1.1
 - Microsoft.Extensions.*
 
 **Feature-Specific Packages**:
+- **BCrypt.Net-Next 4.0.3** - Password hashing
 - **MailKit 4.14.1** - SMTP email sending (low stock alerts)
 - **MimeKit 4.14.0** - Email message composition (required by MailKit)
 - **QuestPDF 2025.12.4** - PDF generation (tickets and reports)
   - Uses Community License (free for non-commercial use)
-  - For production commercial use, acquire appropriate license
 - **System.IdentityModel.Tokens.Jwt 8.15.0** - JWT token generation and validation
 - **Microsoft.AspNetCore.Authentication.JwtBearer 10.0.3** - JWT authentication middleware
+- **EnyimMemcachedCore 3.4.5** - Caching (placeholder for future implementation)
 
 ## Dependency Injection
 
@@ -350,12 +348,13 @@ Each layer registers its services via extension methods:
 ### Application Layer - `AddApplication()`
 - Custom Mediator with all handlers from assembly
 - Mapster configuration (auto-scanned from assembly)
+- FluentValidation validators from assembly
 - Domain event dispatcher
 - Pipeline behaviors (placeholder for cross-cutting concerns)
 
 ### Infrastructure Layer - `AddInfrastructure()`
 - DbContext (`SuperPOSDbContext`) with SQL Server
-- `IUnitOfWork` and all repository implementations (Products, Customers, Users, Sales, Inventories, CashRegisters, Returns, Roles, EmailLogs, RefreshTokens)
+- `IUnitOfWork` and all repository implementations
 - Domain services implementations:
   - `IProductUniquenessChecker`, `ICustomerUniquenessChecker`, `IUserUniquenessChecker`
   - `ISaleValidationService` (validates customer/user existence)
@@ -371,7 +370,7 @@ Each layer registers its services via extension methods:
   - `SaleCancelledEventHandler` (restores inventory)
   - `ReturnApprovedEventHandler` (restores inventory)
 - Configuration options:
-  - `JwtSettings` - JWT configuration (SecretKey, Issuer, Audience, token expiration)
+  - `JwtSettings` - JWT configuration
 - Caching (placeholder for future implementation)
 
 ## Mapster Configuration
@@ -430,7 +429,7 @@ Two-level error handling strategy:
 2. **Unhandled Exceptions** - `GlobalExceptionHandlingMiddleware`
    - Catches all unhandled exceptions
    - Returns 500 Internal Server Error with ProblemDetails
-   - Logs exception message (configured in middleware)
+   - Logs exception message
 
 ## Advanced Patterns
 
@@ -447,14 +446,9 @@ var sale = await _unitOfWork.Sales.GetByIdWithDetailsAsync(saleId, cancellationT
 
 var allSales = await _unitOfWork.Sales.GetAllWithDetailsAsync(cancellationToken);
 // Returns all Sales with complete details
-
-var salesByDate = await _unitOfWork.Sales.GetByDateRangeAsync(startDate, endDate, cancellationToken);
-// Returns Sales filtered by date range
 ```
 
 **Option 2: Manual Loading (if specific method doesn't exist)**
-
-Since base repository does not support eager loading, load related entities manually:
 
 ```csharp
 // Get the main entity
@@ -470,57 +464,24 @@ var saleDetails = await _unitOfWork.Repository<SaleDetail>().QueryAsync(
     cancellationToken: cancellationToken
 );
 sale.SaleDetails = saleDetails.ToList();
-
-// Load nested relations
-foreach (var detail in sale.SaleDetails)
-{
-    detail.Product = await _unitOfWork.Products.GetByIdAsync(detail.ProductId, cancellationToken);
-}
 ```
 
 **Best Practice:** Check if a specific repository method exists before implementing manual loading.
 
-### Specification Pattern Usage (Future Feature)
+### Specification Pattern (Not Currently Used)
 
-**Note:** Specification pattern infrastructure exists but is not currently used. The pattern is available for future implementation.
+**Note:** Specification pattern infrastructure exists but is not currently used. The pattern is available for future implementation if needed.
 
-If you need to create a specification:
-
-```csharp
-public class CustomerActiveSpecification : BaseSpecification<Customer>
-{
-    public CustomerActiveSpecification() : base(c => c.DeletedAt == null)
-    {
-        AddInclude(c => c.Sales);
-        AddOrderBy(c => c.Name);
-    }
-}
-```
-
-Use in repository:
-```csharp
-var customers = await _unitOfWork.Repository<Customer>().GetAllWithSpecAsync(new CustomerActiveSpecification());
-```
-
-**Current Approach:** Use specific repository methods or manual filtering instead.
-
-### Pagination (Future Feature)
+### Pagination (Not Currently Used)
 
 **Note:** Pagination infrastructure exists (`BasePaginationQuery`, `PaginationDTO<T>`) but is not currently used.
-
-When implementing pagination:
-```csharp
-public record CustomersGetPagedQuery(int PageNumber, int PageSize) : BasePaginationQuery;
-```
-
-Return `PaginationDTO<T>` with metadata (page, size, total count, page count).
 
 ## Services
 
 ### IEncryptionService
 Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 
-**Purpose:** Password hashing, data encryption (implementation details in Infrastructure layer)
+**Purpose:** Password hashing with BCrypt (VerifyText, EncryptText methods)
 
 ### Domain Services
 
@@ -561,7 +522,7 @@ Located in `Application/Interfaces/Services/`, implemented in Infrastructure.
 
 ### JWT Authentication System
 
-**Status**: ✅ Fully Implemented (2026-02-11)
+**Status**: ✅ Fully Implemented
 
 **Architecture**:
 - Access Token (JWT): Short-lived token (30 min default) for API authentication
@@ -632,7 +593,7 @@ public void Activate() / Deactivate()           // Toggle account status
 
 ### Role-Based Access Control (RBAC)
 
-**Status**: ✅ Fully Implemented (2026-02-11)
+**Status**: ✅ Fully Implemented
 
 **Available Roles**:
 1. **Administrador** (Admin) - Full system access
@@ -670,47 +631,7 @@ All controllers are protected with `[Authorize]` attribute. Specific policies pe
 - `PUT /{id}` - [Authorize(Policy = "ManagerOrAbove")]
 - `DELETE /{id}` - [Authorize(Policy = "AdminOnly")]
 
-**CustomerController** (`/api/customer`):
-- `POST` - [Authorize(Policy = "SellerOrAbove")]
-- `GET /{id}` - [Authorize(Policy = "SellerOrAbove")]
-- `GET` (GetAll) - [Authorize(Policy = "SellerOrAbove")]
-- `GET /search` - [Authorize(Policy = "SellerOrAbove")]
-- `PUT /{id}` - [Authorize(Policy = "ManagerOrAbove")]
-- `DELETE /{id}` - [Authorize(Policy = "AdminOnly")]
-
-**SaleController** (`/api/sale`):
-- `POST` - [Authorize(Policy = "SellerOrAbove")]
-- `GET /{id}` - [Authorize(Policy = "SellerOrAbove")]
-- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
-- `GET /{id}/ticket` - [Authorize(Policy = "SellerOrAbove")]
-- `POST /{id}/cancel` - [Authorize(Policy = "ManagerOrAbove")]
-
-**InventoryController** (`/api/inventory`):
-- `POST /adjust` - [Authorize(Policy = "ManagerOrAbove")]
-- `GET /product/{productId}` - [Authorize(Policy = "SellerOrAbove")]
-- `GET` (GetAll) - [Authorize(Policy = "SellerOrAbove")]
-- `GET /low-stock` - [Authorize(Policy = "ManagerOrAbove")]
-
-**CashRegisterController** (`/api/cashregister`):
-- `POST` - [Authorize(Policy = "ManagerOrAbove")]
-- `GET /{id}` - [Authorize(Policy = "ManagerOrAbove")]
-- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
-- `GET /{id}/report` - [Authorize(Policy = "ManagerOrAbove")]
-
-**ReturnController** (`/api/return`):
-- `POST` - [Authorize(Policy = "SellerOrAbove")]
-- `GET /{id}` - [Authorize(Policy = "SellerOrAbove")]
-- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
-- `GET /status/{status}` - [Authorize(Policy = "ManagerOrAbove")]
-- `POST /{id}/approve` - [Authorize(Policy = "ManagerOrAbove")]
-- `POST /{id}/reject` - [Authorize(Policy = "ManagerOrAbove")]
-
-**RoleController** (`/api/role`):
-- `POST` - [Authorize(Policy = "AdminOnly")]
-- `GET /{id}` - [Authorize(Policy = "ManagerOrAbove")]
-- `GET` (GetAll) - [Authorize(Policy = "ManagerOrAbove")]
-- `PUT /{id}` - [Authorize(Policy = "AdminOnly")]
-- `DELETE /{id}` - [Authorize(Policy = "AdminOnly")]
+**Other Controllers**: See documentation for complete list of protected endpoints on CustomerController, SaleController, InventoryController, CashRegisterController, ReturnController, and RoleController.
 
 **Usage in Client**:
 ```http
@@ -738,25 +659,12 @@ Authorization: Bearer <access-token>
 10. **PDF Generation** - Professional tickets and cash register reports (QuestPDF)
 11. **Search Functionality** - Products, Customers, and Users
 12. **Soft Delete** - All entities support soft delete with timestamp
-13. **Value Objects** - Email, PersonName, PhoneNumber, Barcode, Quantity (Money was removed)
+13. **Value Objects** - Email, PersonName, PhoneNumber, Barcode, Quantity
 14. **Domain Events** - Product created/price changed, sale created/cancelled, low stock detected, return approved
 15. **Two-Phase Stock Reservation** - Prevents overselling with validate/reserve, commit/rollback pattern
-16. **Nullable Reference Types** - All projects have nullable enabled, all warnings resolved (2026-02-11)
+16. **Nullable Reference Types** - All projects have nullable enabled, all warnings resolved
 17. **JWT Authentication** - Complete authentication system with access token (30 min) and refresh token (30 days)
-    - Login with email/password validation using BCrypt
-    - Account lockout after 5 failed attempts (30 minutes)
-    - Active/inactive account management
-    - Login tracking (LastLoginAt, FailedLoginAttempts)
-    - Token refresh endpoint
-    - Logout with token revocation
-    - Endpoints: `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`
-18. **Role-Based Access Control (RBAC)** - Complete authorization system with three roles
-    - **Administrador** (Admin): Full system access
-    - **Gerente** (Manager): Sales, inventory, reports, user management (read)
-    - **Vendedor** (Seller): Sales and basic queries only
-    - Authorization policies: `AdminOnly`, `ManagerOrAbove`, `SellerOrAbove`
-    - All endpoints protected with `[Authorize]` attributes
-    - Role-based claims in JWT tokens
+18. **Role-Based Access Control (RBAC)** - Complete authorization system with three roles (Admin, Manager, Seller)
 
 ### ⚠️ Implemented Infrastructure, Not Used
 
@@ -768,36 +676,26 @@ Authorization: Bearer <access-token>
 1. **Payment Methods** - Sales do not track payment type (cash, card, etc.)
 2. **Product Categories** - No product categorization
 3. **Unit Tests** - No test projects exist
-4. **Caching** - Placeholder only
-5. **Sale Updates** - Sales can be cancelled but not edited (immutable after creation)
-6. **Password Recovery** - PasswordResetToken entity exists but workflow not implemented
-7. **Advanced Reports** - Sales reports with filters, charts, and export (PDF/Excel)
-8. **Dashboard Analytics** - Statistics, trends, and metrics visualization
+4. **Sale Updates** - Sales can be cancelled but not edited (immutable after creation)
+5. **Password Recovery** - PasswordResetToken entity exists but workflow not implemented
+6. **Advanced Reports** - Sales reports with filters, charts, and export (PDF/Excel)
+7. **Dashboard Analytics** - Statistics, trends, and metrics visualization
+8. **Chat in Real-Time** - ChatMessage and Conversation entities exist but SignalR not implemented
 
 ### Important Notes
 
-- **Validation:** No FluentValidation or separate validator files. Validation is done:
-  - In domain entities via value objects and factory methods
-  - In handlers directly
-  - Via domain services (uniqueness checkers, validation services)
+- **Validation:** Uses FluentValidation in Application layer. No separate validator files per command/query.
 - **Messages:** All user-facing messages are in Spanish
 - **Specific Repositories:** Some entities (Sales, Products, etc.) have specialized repository methods. Always check `IUnitOfWork` properties before using generic `Repository<T>()`
 - **CreatedAtAction:** All POST endpoints that create resources must pass `nameof(GetById)` to `HandleResult()` for proper Location header generation
-- **Domain Events:** Event-driven architecture in place:
-  - Events raised by aggregate roots (Sale, Inventory, Return)
-  - Event handlers registered in DI and executed automatically on SaveChangesAsync
-  - Examples: LowStockEvent → email alerts, SaleCancelledEvent → inventory restoration, ReturnApprovedEvent → inventory restoration
+- **Domain Events:** Event-driven architecture in place
 - **Immutable Sales:** Sales cannot be edited after creation, only cancelled (with automatic inventory rollback)
 - **Return Window:** Returns must be requested within 30 days of the original sale
 - **Email Configuration:** Requires valid SMTP credentials in EmailSettings. Use Gmail app passwords for development.
 - **PDF License:** QuestPDF Community License in use. For commercial production, acquire appropriate license.
-- **Nullable References:** All projects have `<Nullable>enable</Nullable>`. Never use `!` operator without null validation. Always validate `FirstOrDefaultAsync()` results before assignment.
-- **BaseCatalog.Description:** Changed from `string` to `string?` (nullable) as of migration `FixNullableDescriptions` (2026-02-11).
-- **JWT Authentication:** All endpoints (except `/api/auth/login`) require valid JWT Bearer token in Authorization header. SecretKey must be configured via User Secrets (min 32 characters).
-- **Authorization Policies:** Three policies available:
-  - `AdminOnly` - Requires "Administrador" role
-  - `ManagerOrAbove` - Requires "Administrador" or "Gerente" role
-  - `SellerOrAbove` - Requires "Administrador", "Gerente", or "Vendedor" role
+- **Nullable References:** All projects have `<Nullable>enable</Nullable>`. Never use `!` operator without null validation.
+- **JWT Authentication:** All endpoints (except `/api/auth/*`) require valid JWT Bearer token in Authorization header. SecretKey must be configured via User Secrets (min 32 characters).
+- **Authorization Policies:** Three policies available: `AdminOnly`, `ManagerOrAbove`, `SellerOrAbove`
 - **Account Security:** Account lockout after 5 failed login attempts for 30 minutes. User accounts can be activated/deactivated via `IsActive` property.
 - **Role Names:** Must match exactly in database: "Administrador", "Gerente", "Vendedor" (Spanish names).
 
@@ -850,45 +748,6 @@ public class ProductGetByIdHandler : IRequestHandler<ProductGetByIdQuery, Operat
 }
 ```
 
-### Handler with Manual Relationship Loading
-
-```csharp
-// File: Application/UseCases/Sales/CQRS/Queries/GetById/SaleGetByIdHandler.cs
-using Application.DesignPatterns.Mediators.Interfaces;
-using Application.DesignPatterns.OperationResults;
-using Application.Interfaces.Persistence.UnitOfWorks;
-using Application.UseCases.Sales.DTOs;
-using Domain.Entities.Customers;
-using Domain.Entities.Sales;
-using Domain.Entities.Users;
-
-namespace Application.UseCases.Sales.CQRS.Queries.GetById;
-
-public class SaleGetByIdHandler : IRequestHandler<SaleGetByIdQuery, OperationResult<SaleDTO>>
-{
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
-
-    public SaleGetByIdHandler(IUnitOfWork unitOfWork, IMapper mapper)
-    {
-        _unitOfWork = unitOfWork;
-        _mapper = mapper;
-    }
-
-    public async Task<OperationResult<SaleDTO>> Handle(SaleGetByIdQuery request, CancellationToken cancellationToken)
-    {
-        // Use specific repository method with eager loading instead of manual loading
-        var sale = await _unitOfWork.Sales.GetByIdWithDetailsAsync(request.Id, cancellationToken);
-
-        if (sale == null)
-            return Result.Error(ErrorResult.NotFound, detail: SaleMessages.NotFound.WithId(request.Id));
-
-        var dto = _mapper.Map<SaleDTO>(sale);
-        return Result.Success(dto);
-    }
-}
-```
-
 ### Controller Example
 
 ```csharp
@@ -911,6 +770,7 @@ public class ProductController : BaseController
     }
 
     [HttpPost]
+    [Authorize(Policy = "ManagerOrAbove")]
     public async Task<IActionResult> Create([FromBody] CreateProductCommand command)
     {
         var result = await _mediator.Send(command);
@@ -918,6 +778,7 @@ public class ProductController : BaseController
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var query = new ProductGetByIdQuery(id);
@@ -926,6 +787,7 @@ public class ProductController : BaseController
     }
 
     [HttpGet]
+    [Authorize(Policy = "SellerOrAbove")]
     public async Task<IActionResult> GetAll()
     {
         var query = new ProductGetAllQuery();
@@ -1017,48 +879,6 @@ public class LoginHandler(
             refreshToken.ExpiresAt,
             userDto
         ), UserMessages.Authentication.LoginSuccess);
-    }
-}
-```
-
-### Controller with Authorization Example
-
-```csharp
-// File: Web.API/Controllers/SaleController.cs
-using Application.DesignPatterns.Mediators.Interfaces;
-using Application.UseCases.Sales.CQRS.Commands.Create;
-using Application.UseCases.Sales.CQRS.Queries.GetAll;
-using Microsoft.AspNetCore.Authorization;
-
-namespace Web.API.Controllers;
-
-[Route("api/[controller]")]
-[Authorize] // Requires authentication for all endpoints
-public class SaleController(IMediator mediator) : BaseController
-{
-    [HttpPost]
-    [Authorize(Policy = "SellerOrAbove")] // Seller, Manager, or Admin can create sales
-    public async Task<IActionResult> Create([FromBody] CreateSaleCommand command)
-    {
-        var result = await mediator.Send(command);
-        return HandleResult(result, nameof(GetById));
-    }
-
-    [HttpGet]
-    [Authorize(Policy = "ManagerOrAbove")] // Only Manager or Admin can view all sales
-    public async Task<IActionResult> GetAll()
-    {
-        var query = new SaleGetAllQuery();
-        var result = await mediator.Send(query);
-        return HandleResult(result);
-    }
-
-    [HttpPost("{id:guid}/cancel")]
-    [Authorize(Policy = "ManagerOrAbove")] // Only Manager or Admin can cancel sales
-    public async Task<IActionResult> Cancel(Guid id, [FromBody] SaleCancelCommand command)
-    {
-        var result = await mediator.Send(command);
-        return HandleResult(result);
     }
 }
 ```
