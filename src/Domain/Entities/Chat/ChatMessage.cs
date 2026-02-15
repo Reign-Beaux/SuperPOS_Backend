@@ -3,8 +3,10 @@ namespace Domain.Entities.Chat;
 /// <summary>
 /// Individual chat message between users.
 /// Part of real-time messaging system using WebSockets.
+/// Note: While technically a child entity of Conversation aggregate,
+/// it implements IAggregateRoot for direct repository access (performance optimization for pagination).
 /// </summary>
-public class ChatMessage : BaseEntity
+public class ChatMessage : BaseEntity, IAggregateRoot
 {
     // Parameterless constructor for EF Core
     public ChatMessage() { }

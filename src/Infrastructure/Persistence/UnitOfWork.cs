@@ -31,6 +31,8 @@ public class UnitOfWork : IUnitOfWork
     private IReturnRepository? _returns;
     private IRefreshTokenRepository? _refreshTokens;
     private IPasswordResetTokenRepository? _passwordResetTokens;
+    private IConversationRepository? _conversations;
+    private IChatMessageRepository? _chatMessages;
 
     public UnitOfWork(SuperPOSDbContext context, IDomainEventDispatcher eventDispatcher)
     {
@@ -49,6 +51,8 @@ public class UnitOfWork : IUnitOfWork
     public IReturnRepository Returns => _returns ??= new ReturnRepository(_context);
     public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
     public IPasswordResetTokenRepository PasswordResetTokens => _passwordResetTokens ??= new PasswordResetTokenRepository(_context);
+    public IConversationRepository Conversations => _conversations ??= new ConversationRepository(_context);
+    public IChatMessageRepository ChatMessages => _chatMessages ??= new ChatMessageRepository(_context);
 
     /// <summary>
     /// Generic repository accessor for aggregate roots that don't need specialized operations.

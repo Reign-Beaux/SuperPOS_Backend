@@ -4,7 +4,7 @@ namespace Domain.Entities.Chat;
 /// Conversation between two users.
 /// Aggregates all messages between a Manager/Admin and a Seller.
 /// </summary>
-public class Conversation : BaseEntity
+public class Conversation : BaseEntity, IAggregateRoot
 {
     private readonly List<ChatMessage> _messages = [];
 

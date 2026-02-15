@@ -3,6 +3,7 @@ using AspNetCoreRateLimit;
 using Infrastructure;
 using Web.API;
 using Web.API.Extensions;
+using Web.API.Hubs;
 using Web.API.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,9 @@ builder.Services
     .AddWebAPI(builder.Configuration)
     .AddApplication()
     .AddInfrastructure(builder.Configuration);
+
+// Add SignalR for real-time chat
+builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
 {
@@ -62,5 +66,6 @@ app.UseCors(cors);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/api/hubs/chat");
 
 app.Run();

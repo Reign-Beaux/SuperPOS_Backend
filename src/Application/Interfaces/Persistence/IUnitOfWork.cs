@@ -20,6 +20,8 @@ public interface IUnitOfWork : IDisposable
     IReturnRepository Returns { get; }
     IRefreshTokenRepository RefreshTokens { get; }
     IPasswordResetTokenRepository PasswordResetTokens { get; }
+    IConversationRepository Conversations { get; }
+    IChatMessageRepository ChatMessages { get; }
 
     /// <summary>
     /// Generic repository accessor for aggregate roots that don't need specialized operations.
