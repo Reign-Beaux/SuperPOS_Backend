@@ -32,4 +32,49 @@ public interface ISaleRepository : IRepositoryBase<Sale>
     /// Gets all sales with their details loaded.
     /// </summary>
     Task<IReadOnlyList<Sale>> GetAllWithDetailsAsync(CancellationToken cancellationToken = default);
+
+    // ===============================
+    // Dashboard & Analytics Methods
+    // ===============================
+
+    /// <summary>
+    /// Gets sales grouped by hour of day for analytics.
+    /// Returns aggregated data: (Hour, SalesCount, TotalAmount)
+    /// </summary>
+    /// <param name="startDate">Start date (inclusive)</param>
+    /// <param name="endDate">End date (exclusive)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of tuples with hourly aggregations (0-23)</returns>
+    Task<IReadOnlyList<(int Hour, int SalesCount, decimal TotalAmount)>> GetHourlySalesAsync(
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets top-selling products with quantities and revenue.
+    /// Returns aggregated data: (ProductId, ProductName, Quantity, Revenue)
+    /// </summary>
+    /// <param name="startDate">Start date (inclusive)</param>
+    /// <param name="endDate">End date (exclusive)</param>
+    /// <param name="topCount">Number of top products to return (default: 10)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of tuples with product sales metrics</returns>
+    Task<IReadOnlyList<(Guid ProductId, string ProductName, int Quantity, decimal Revenue)>> GetTopProductsAsync(
+        DateTime startDate,
+        DateTime endDate,
+        int topCount = 10,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets summary statistics for a date range.
+    /// Returns aggregated data: (TotalSales, TotalRevenue, AvgTicketSize, TotalItemsSold)
+    /// </summary>
+    /// <param name="startDate">Start date (inclusive)</param>
+    /// <param name="endDate">End date (exclusive)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Tuple with sales summary metrics</returns>
+    Task<(int TotalSales, decimal TotalRevenue, decimal AvgTicketSize, int TotalItemsSold)> GetSalesSummaryAsync(
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken cancellationToken = default);
 }

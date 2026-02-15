@@ -94,4 +94,87 @@ public sealed class SaleRepository : RepositoryBase<Sale>, ISaleRepository
                 detail.Product = product;
         }
     }
+
+    // ===============================
+    // Dashboard & Analytics Methods
+    // ===============================
+
+    public async Task<IReadOnlyList<(int Hour, int SalesCount, decimal TotalAmount)>> GetHourlySalesAsync(
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var hourlyData = await _dbSet
+            .Where(s => !s.IsCancelled && s.CreatedAt >= startDate && s.CreatedAt < endDate && s.DeletedAt == null)
+            .AsNoTracking()
+            .GroupBy(s => s.CreatedAt.Hour)
+            .Select(g => new
+            {
+                Hour = g.Key,
+                SalesCount = g.Count(),
+                TotalAmount = g.Sum(s => s.TotalAmount)
+            })
+            .OrderBy(x => x.Hour)
+            .ToListAsync(cancellationToken);
+
+        return hourlyData
+            .Select(h => (h.Hour, h.SalesCount, h.TotalAmount))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<(Guid ProductId, string ProductName, int Quantity, decimal Revenue)>> GetTopProductsAsync(
+        DateTime startDate,
+        DateTime endDate,
+        int topCount = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var topProducts = await _dbSet
+            .Where(s => !s.IsCancelled && s.CreatedAt >= startDate && s.CreatedAt < endDate && s.DeletedAt == null)
+            .AsNoTracking()
+            .AsSplitQuery()
+            .SelectMany(s => s.SaleDetails)
+            .GroupBy(sd => new { sd.ProductId, sd.Product.Name })
+            .Select(g => new
+            {
+                ProductId = g.Key.ProductId,
+                ProductName = g.Key.Name,
+                Quantity = g.Sum(sd => sd.Quantity),
+                Revenue = g.Sum(sd => sd.Total)
+            })
+            .OrderByDescending(x => x.Quantity)
+            .Take(topCount)
+            .ToListAsync(cancellationToken);
+
+        return topProducts
+            .Select(p => (p.ProductId, p.ProductName, p.Quantity, p.Revenue))
+            .ToList();
+    }
+
+    public async Task<(int TotalSales, decimal TotalRevenue, decimal AvgTicketSize, int TotalItemsSold)> GetSalesSummaryAsync(
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var sales = await _dbSet
+            .Where(s => !s.IsCancelled && s.CreatedAt >= startDate && s.CreatedAt < endDate && s.DeletedAt == null)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        if (!sales.Any())
+            return (0, 0, 0, 0);
+
+        // Load sale details for total items calculation
+        var saleIds = sales.Select(s => s.Id).ToList();
+        var saleDetails = await _context.Set<SaleDetail>()
+            .Where(sd => saleIds.Contains(sd.SaleId))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var totalSales = sales.Count;
+        var totalRevenue = sales.Sum(s => s.TotalAmount);
+        var avgTicketSize = sales.Average(s => s.TotalAmount);
+        var totalItemsSold = saleDetails.Sum(sd => sd.Quantity);
+
+        return (totalSales, totalRevenue, avgTicketSize, totalItemsSold);
+    }
 }
