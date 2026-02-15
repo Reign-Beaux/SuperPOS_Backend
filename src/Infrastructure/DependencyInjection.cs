@@ -78,6 +78,7 @@ public static class DependencyInjection
         // Application services
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ITicketService, TicketService>();
+        services.AddScoped<IReportService, ReportService>();
 
         // Background services
         services.AddHostedService<TokenCleanupService>();
