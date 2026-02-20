@@ -100,8 +100,8 @@ public class ReportService : IReportService
                             });
 
                             var revenueChange = reportData.Comparison.RevenueChangePercent;
-                            var salesChange = reportData.Comparison.SalesCountChangePercent;
-                            var ticketChange = reportData.Comparison.AvgTicketChangePercent;
+                            var salesChange = reportData.Comparison.SalesChangePercent;
+                            var ticketChange = reportData.Comparison.AverageTicketChangePercent;
 
                             AddComparisonRow(table, "Cambio en Ingresos:", revenueChange);
                             AddComparisonRow(table, "Cambio en Ventas:", salesChange);
@@ -316,10 +316,10 @@ public class ReportService : IReportService
             summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.RevenueChangePercent:N2}%";
 
             summarySheet.Cell(row, 1).Value = "Cambio en Ventas";
-            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.SalesCountChangePercent:N2}%";
+            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.SalesChangePercent:N2}%";
 
             summarySheet.Cell(row, 1).Value = "Cambio en Ticket Promedio";
-            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.AvgTicketChangePercent:N2}%";
+            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.AverageTicketChangePercent:N2}%";
         }
 
         summarySheet.Columns().AdjustToContents();
@@ -798,8 +798,8 @@ public class ReportService : IReportService
                             });
 
                             AddComparisonRow(table, "Cambio en Ingresos:", reportData.Comparison.RevenueChangePercent);
-                            AddComparisonRow(table, "Cambio en Ventas:", reportData.Comparison.SalesCountChangePercent);
-                            AddComparisonRow(table, "Cambio en Ticket Promedio:", reportData.Comparison.AvgTicketChangePercent);
+                            AddComparisonRow(table, "Cambio en Ventas:", reportData.Comparison.SalesChangePercent);
+                            AddComparisonRow(table, "Cambio en Ticket Promedio:", reportData.Comparison.AverageTicketChangePercent);
                         });
                     }
 
@@ -967,10 +967,10 @@ public class ReportService : IReportService
             summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.RevenueChangePercent:N2}%";
 
             summarySheet.Cell(row, 1).Value = "Cambio en Ventas";
-            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.SalesCountChangePercent:N2}%";
+            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.SalesChangePercent:N2}%";
 
             summarySheet.Cell(row, 1).Value = "Cambio en Ticket Promedio";
-            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.AvgTicketChangePercent:N2}%";
+            summarySheet.Cell(row++, 2).Value = $"{reportData.Comparison.AverageTicketChangePercent:N2}%";
         }
 
         summarySheet.Columns().AdjustToContents();

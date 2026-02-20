@@ -38,10 +38,13 @@ public class GetTopCustomersHandler
         var specification = new SalesByDateRangeSpecification(startDate, endDate);
         var sales = await _unitOfWork.Sales.ListAsync(specification, cancellationToken);
 
-        // 4. Cargar información de clientes
-        var customerIds = sales.Select(s => s.CustomerId).Distinct();
-        var customers = await Task.WhenAll(
-            customerIds.Select(id => _unitOfWork.Customers.GetByIdAsync(id, cancellationToken)));
+        // 4. Cargar información de clientes secuencialmente
+        // (EF Core no permite operaciones concurrentes en el mismo DbContext)
+        var customerIds = sales.Select(s => s.CustomerId).Distinct().ToList();
+        var customerList = new List<Domain.Entities.Customers.Customer?>();
+        foreach (var id in customerIds)
+            customerList.Add(await _unitOfWork.Customers.GetByIdAsync(id, cancellationToken));
+        var customers = customerList.ToArray();
 
         // 5. Agrupar por cliente y calcular métricas
         var topCustomers = sales

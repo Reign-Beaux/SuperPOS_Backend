@@ -9,6 +9,8 @@ public record PeriodComparisonDTO(
     DailySummaryDTO CurrentPeriod,        // Resumen del período actual
     DailySummaryDTO PreviousPeriod,       // Resumen del período anterior
     decimal RevenueChangePercent,         // Cambio porcentual en ingresos
-    decimal SalesCountChangePercent,      // Cambio porcentual en número de ventas
-    decimal AvgTicketChangePercent        // Cambio porcentual en tamaño promedio del ticket
+    decimal SalesChangePercent,           // Cambio porcentual en número de ventas
+    decimal AverageTicketChangePercent,   // Cambio porcentual en tamaño promedio del ticket
+    decimal ItemsSoldChangePercent,       // Cambio porcentual en artículos vendidos
+    decimal CustomersChangePercent        // Cambio porcentual en clientes únicos
 );

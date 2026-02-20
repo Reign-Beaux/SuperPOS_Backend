@@ -71,6 +71,14 @@ public static class DependencyInjection
             options.AddPolicy("ManagementOnly", policy =>
                 policy.RequireRole("Administrador", "Gerente"));
 
+            // Manager o superior: Gerente y Admin — usado en Dashboard y Report
+            options.AddPolicy("ManagerOrAbove", policy =>
+                policy.RequireRole("Administrador", "Gerente"));
+
+            // Seller o superior: Vendedor, Gerente y Admin — usado en Chat
+            options.AddPolicy("SellerOrAbove", policy =>
+                policy.RequireRole("Administrador", "Gerente", "Vendedor"));
+
             // POS: Solo Vendedor y Admin (NO Gerente)
             options.AddPolicy("POSOnly", policy =>
                 policy.RequireRole("Administrador", "Vendedor"));

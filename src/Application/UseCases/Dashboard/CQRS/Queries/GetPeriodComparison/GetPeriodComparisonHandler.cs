@@ -34,17 +34,13 @@ public class GetPeriodComparisonHandler
         var previousEnd = currentStart;
         var previousStart = previousEnd - timeSpan;
 
-        // 3. Obtener resúmenes para ambos períodos en paralelo
+        // 3. Obtener resúmenes para ambos períodos secuencialmente
+        // (EF Core no permite operaciones concurrentes en el mismo DbContext)
         var currentQuery = new GetDailySummaryQuery(DashboardPeriod.Custom, currentStart, currentEnd);
         var previousQuery = new GetDailySummaryQuery(DashboardPeriod.Custom, previousStart, previousEnd);
 
-        var currentTask = _mediator.Send(currentQuery, cancellationToken);
-        var previousTask = _mediator.Send(previousQuery, cancellationToken);
-
-        await Task.WhenAll(currentTask, previousTask);
-
-        var currentResult = await currentTask;
-        var previousResult = await previousTask;
+        var currentResult = await _mediator.Send(currentQuery, cancellationToken);
+        var previousResult = await _mediator.Send(previousQuery, cancellationToken);
 
         // 4. Verificar que ambas consultas fueron exitosas
         if (!currentResult.IsSuccess || !previousResult.IsSuccess)
@@ -57,7 +53,7 @@ public class GetPeriodComparisonHandler
             previousResult.Value!.TotalRevenue,
             currentResult.Value!.TotalRevenue);
 
-        var salesCountChange = CalculatePercentChange(
+        var salesChange = CalculatePercentChange(
             previousResult.Value.TotalSales,
             currentResult.Value.TotalSales);
 
@@ -65,14 +61,24 @@ public class GetPeriodComparisonHandler
             previousResult.Value.AverageTicketSize,
             currentResult.Value.AverageTicketSize);
 
+        var itemsSoldChange = CalculatePercentChange(
+            previousResult.Value.TotalItemsSold,
+            currentResult.Value.TotalItemsSold);
+
+        var customersChange = CalculatePercentChange(
+            previousResult.Value.TotalCustomers,
+            currentResult.Value.TotalCustomers);
+
         // 6. Crear DTO de comparación
         var comparison = new PeriodComparisonDTO(
             PeriodName: GetPeriodComparisonName(request.Period),
             CurrentPeriod: currentResult.Value,
             PreviousPeriod: previousResult.Value,
             RevenueChangePercent: revenueChange,
-            SalesCountChangePercent: salesCountChange,
-            AvgTicketChangePercent: avgTicketChange
+            SalesChangePercent: salesChange,
+            AverageTicketChangePercent: avgTicketChange,
+            ItemsSoldChangePercent: itemsSoldChange,
+            CustomersChangePercent: customersChange
         );
 
         return Result.Success(comparison);

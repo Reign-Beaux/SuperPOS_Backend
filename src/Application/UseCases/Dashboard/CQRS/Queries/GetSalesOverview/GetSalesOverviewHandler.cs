@@ -22,41 +22,39 @@ public class GetSalesOverviewHandler
         GetSalesOverviewQuery request,
         CancellationToken cancellationToken)
     {
-        // Ejecutar múltiples consultas en paralelo para máximo rendimiento
-        var todayTask = _mediator.Send(
+        // Ejecutar consultas secuencialmente
+        // (EF Core no permite operaciones concurrentes en el mismo DbContext)
+        var todayResult = await _mediator.Send(
             new GetDailySummaryQuery(DashboardPeriod.Today),
             cancellationToken);
 
-        var weekTask = _mediator.Send(
+        var weekResult = await _mediator.Send(
             new GetDailySummaryQuery(DashboardPeriod.ThisWeek),
             cancellationToken);
 
-        var monthTask = _mediator.Send(
+        var monthResult = await _mediator.Send(
             new GetDailySummaryQuery(DashboardPeriod.ThisMonth),
             cancellationToken);
 
-        var topProductsTask = _mediator.Send(
+        var topProductsResult = await _mediator.Send(
             new GetTopProductsQuery(DashboardPeriod.ThisMonth, TopCount: 5),
             cancellationToken);
 
-        var topCustomersTask = _mediator.Send(
+        var topCustomersResult = await _mediator.Send(
             new GetTopCustomersQuery(DashboardPeriod.ThisMonth, TopCount: 5),
             cancellationToken);
 
-        var hourlyTask = _mediator.Send(
+        var hourlyResult = await _mediator.Send(
             new GetHourlyTrendsQuery(DashboardPeriod.Today),
             cancellationToken);
 
-        // Esperar a que todas las consultas terminen
-        await Task.WhenAll(todayTask, weekTask, monthTask, topProductsTask, topCustomersTask, hourlyTask);
-
         // Verificar que todas las consultas fueron exitosas
-        if (!todayTask.Result.IsSuccess ||
-            !weekTask.Result.IsSuccess ||
-            !monthTask.Result.IsSuccess ||
-            !topProductsTask.Result.IsSuccess ||
-            !topCustomersTask.Result.IsSuccess ||
-            !hourlyTask.Result.IsSuccess)
+        if (!todayResult.IsSuccess ||
+            !weekResult.IsSuccess ||
+            !monthResult.IsSuccess ||
+            !topProductsResult.IsSuccess ||
+            !topCustomersResult.IsSuccess ||
+            !hourlyResult.IsSuccess)
         {
             return Result.Error(
                 ErrorResult.InternalServerError,
@@ -65,12 +63,12 @@ public class GetSalesOverviewHandler
 
         // Crear el DTO de vista general
         var overview = new SalesOverviewDTO(
-            TodaySummary: todayTask.Result.Value!,
-            ThisWeekSummary: weekTask.Result.Value!,
-            ThisMonthSummary: monthTask.Result.Value!,
-            TopProducts: topProductsTask.Result.Value!,
-            TopCustomers: topCustomersTask.Result.Value!,
-            HourlyTrends: hourlyTask.Result.Value!
+            TodaySummary: todayResult.Value!,
+            ThisWeekSummary: weekResult.Value!,
+            ThisMonthSummary: monthResult.Value!,
+            TopProducts: topProductsResult.Value!,
+            TopCustomers: topCustomersResult.Value!,
+            HourlyTrends: hourlyResult.Value!
         );
 
         return Result.Success(overview);
